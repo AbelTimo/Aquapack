@@ -1,0 +1,466 @@
+// ============================================
+// AQUAPACK - Database Schema
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  FIELD_USER
+  TEAM_LEAD
+  DATA_MANAGER
+  ADMIN
+}
+
+enum SyncStatus {
+  SYNCED
+  PENDING
+  CONFLICT
+  ERROR
+}
+
+enum QAStatus {
+  PENDING
+  APPROVED
+  FLAGGED
+  REJECTED
+}
+
+enum WellType {
+  BOREHOLE
+  DUG_WELL
+  SPRING
+  PIEZOMETER
+}
+
+enum PumpTestType {
+  STEP_TEST
+  CONSTANT_RATE
+  RECOVERY
+  SLUG_TEST
+}
+
+enum MeasurementMethod {
+  MANUAL_TAPE
+  PRESSURE_TRANSDUCER
+  SOUNDER
+  OTHER
+}
+
+// ---------- Organization & Users ----------
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  users     User[]
+  projects  Project[]
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String
+  name           String
+  role           UserRole  @default(FIELD_USER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  projectAssignments ProjectAssignment[]
+  createdSites       Site[]
+  createdBoreholes   Borehole[]
+  createdWaterLevels WaterLevelMeasurement[]
+  createdPumpTests   PumpTest[]
+  createdWaterQuality WaterQualityReading[]
+  reviewComments     ReviewComment[]
+  refreshTokens      RefreshToken[]
+
+  @@index([email])
+  @@index([organizationId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId  String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ---------- Projects ----------
+
+model Project {
+  id             String       @id @default(uuid())
+  name           String
+  code           String       @unique
+  client         String?
+  region         String?
+  description    String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  templateConfig Json?
+  startDate      DateTime?
+  endDate        DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdBy      String?
+
+  // Relations
+  assignments ProjectAssignment[]
+  sites       Site[]
+
+  @@index([organizationId])
+  @@index([code])
+}
+
+model ProjectAssignment {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role       UserRole @default(FIELD_USER)
+  assignedAt DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// ---------- Sites ----------
+
+model Site {
+  id          String     @id @default(uuid())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  code        String
+  latitude    Float
+  longitude   Float
+  accuracy    Float?
+  altitude    Float?
+  locationCapturedAt DateTime?
+  description String?
+  siteType    String?
+  accessNotes String?
+  qaStatus    QAStatus   @default(PENDING)
+  syncStatus  SyncStatus @default(SYNCED)
+  deviceId    String?
+  localId     String?
+  createdBy   String
+  creator     User       @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  boreholes        Borehole[]
+  waterLevels      WaterLevelMeasurement[]
+  pumpTests        PumpTest[]
+  waterQualityReadings WaterQualityReading[]
+  media            Media[]
+  reviewComments   ReviewComment[]
+
+  @@unique([projectId, code])
+  @@index([projectId])
+  @@index([createdBy])
+  @@index([qaStatus])
+}
+
+// ---------- Boreholes / Wells ----------
+
+model Borehole {
+  id               String     @id @default(uuid())
+  siteId           String
+  site             Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name             String
+  wellType         WellType
+  totalDepth       Float
+  depthUnit        String     @default("meters")
+  drillingDate     DateTime?
+  drillingMethod   String?
+  driller          String?
+  diameter         Float?
+  casingDetails    Json?      // Array of CasingInterval
+  screenIntervals  Json?      // Array of ScreenInterval
+  lithologyLog     Json?      // Array of LithologyInterval
+  staticWaterLevel Float?
+  notes            String?
+  qaStatus         QAStatus   @default(PENDING)
+  syncStatus       SyncStatus @default(SYNCED)
+  deviceId         String?
+  localId          String?
+  createdBy        String
+  creator          User       @relation(fields: [createdBy], references: [id])
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Relations
+  waterLevels      WaterLevelMeasurement[]
+  pumpTests        PumpTest[]
+  waterQualityReadings WaterQualityReading[]
+  media            Media[]
+  reviewComments   ReviewComment[]
+
+  @@index([siteId])
+  @@index([createdBy])
+}
+
+// ---------- Water Level Measurements ----------
+
+model WaterLevelMeasurement {
+  id                  String            @id @default(uuid())
+  siteId              String
+  site                Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  boreholeId          String?
+  borehole            Borehole?         @relation(fields: [boreholeId], references: [id])
+  measurementDatetime DateTime
+  depthToWater        Float
+  depthUnit           String            @default("meters")
+  measurementMethod   MeasurementMethod
+  measurementType     String            @default("static") // static, dynamic, recovery
+  referencePoint      String?
+  notes               String?
+  qaStatus            QAStatus          @default(PENDING)
+  syncStatus          SyncStatus        @default(SYNCED)
+  deviceId            String?
+  localId             String?
+  createdBy           String
+  creator             User              @relation(fields: [createdBy], references: [id])
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  // Relations
+  reviewComments ReviewComment[]
+
+  @@index([siteId])
+  @@index([boreholeId])
+  @@index([measurementDatetime])
+}
+
+// ---------- Pump Tests ----------
+
+model PumpTest {
+  id               String       @id @default(uuid())
+  siteId           String
+  site             Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  boreholeId       String?
+  borehole         Borehole?    @relation(fields: [boreholeId], references: [id])
+  testType         PumpTestType
+  testName         String?
+  startDatetime    DateTime
+  endDatetime      DateTime?
+  staticWaterLevel Float?
+  pumpDepth        Float?
+  pumpType         String?
+  notes            String?
+  qaStatus         QAStatus     @default(PENDING)
+  syncStatus       SyncStatus   @default(SYNCED)
+  deviceId         String?
+  localId          String?
+  createdBy        String
+  creator          User         @relation(fields: [createdBy], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relations
+  entries        PumpTestEntry[]
+  steps          PumpTestStep[]
+  media          Media[]
+  reviewComments ReviewComment[]
+
+  @@index([siteId])
+  @@index([boreholeId])
+  @@index([startDatetime])
+}
+
+model PumpTestEntry {
+  id             String     @id @default(uuid())
+  pumpTestId     String
+  pumpTest       PumpTest   @relation(fields: [pumpTestId], references: [id], onDelete: Cascade)
+  elapsedMinutes Float
+  elapsedSeconds Float?
+  depthToWater   Float
+  drawdown       Float?
+  discharge      Float?
+  dischargeUnit  String?    @default("l/s")
+  notes          String?
+  syncStatus     SyncStatus @default(SYNCED)
+  deviceId       String?
+  localId        String?
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([pumpTestId])
+  @@index([elapsedMinutes])
+}
+
+model PumpTestStep {
+  id              String   @id @default(uuid())
+  pumpTestId      String
+  pumpTest        PumpTest @relation(fields: [pumpTestId], references: [id], onDelete: Cascade)
+  stepNumber      Int
+  startMinutes    Float
+  endMinutes      Float
+  targetDischarge Float
+  actualDischarge Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([pumpTestId])
+}
+
+// ---------- Water Quality ----------
+
+model WaterQualityReading {
+  id                     String     @id @default(uuid())
+  siteId                 String
+  site                   Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  boreholeId             String?
+  borehole               Borehole?  @relation(fields: [boreholeId], references: [id])
+  sampleDatetime         DateTime
+  sampleId               String?
+
+  // Field parameters
+  temperature            Float?
+  temperatureUnit        String     @default("celsius")
+  ph                     Float?
+  electricalConductivity Float?
+  ecUnit                 String     @default("uS/cm")
+  totalDissolvedSolids   Float?
+  tdsUnit                String     @default("mg/L")
+  dissolvedOxygen        Float?
+  doUnit                 String     @default("mg/L")
+  turbidity              Float?
+  turbidityUnit          String     @default("NTU")
+  redoxPotential         Float?
+
+  // Instrument metadata
+  instrumentId    String?
+  calibrationDate DateTime?
+
+  notes           String?
+  qaStatus        QAStatus   @default(PENDING)
+  syncStatus      SyncStatus @default(SYNCED)
+  deviceId        String?
+  localId         String?
+  createdBy       String
+  creator         User       @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  reviewComments ReviewComment[]
+
+  @@index([siteId])
+  @@index([boreholeId])
+  @@index([sampleDatetime])
+}
+
+// ---------- Media ----------
+
+model Media {
+  id               String     @id @default(uuid())
+  linkedEntityType String     // site, borehole, pump_test, water_quality, water_level
+  linkedEntityId   String
+  fileName         String
+  fileType         String
+  fileSize         Int
+  filePath         String?    // Local path (for mobile)
+  fileUrl          String?    // S3 URL (after upload)
+  s3Key            String?    // S3 object key
+  caption          String?
+  capturedAt       DateTime?
+  latitude         Float?
+  longitude        Float?
+  syncStatus       SyncStatus @default(SYNCED)
+  deviceId         String?
+  localId          String?
+  createdBy        String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Polymorphic relations (manual)
+  site      Site?     @relation(fields: [siteId], references: [id])
+  siteId    String?
+  borehole  Borehole? @relation(fields: [boreholeId], references: [id])
+  boreholeId String?
+  pumpTest  PumpTest? @relation(fields: [pumpTestId], references: [id])
+  pumpTestId String?
+
+  @@index([linkedEntityType, linkedEntityId])
+  @@index([siteId])
+  @@index([boreholeId])
+  @@index([pumpTestId])
+}
+
+// ---------- Reviews ----------
+
+model ReviewComment {
+  id               String     @id @default(uuid())
+  linkedEntityType String
+  linkedEntityId   String
+  reviewerId       String
+  reviewer         User       @relation(fields: [reviewerId], references: [id])
+  status           QAStatus
+  comment          String
+  resolvedAt       DateTime?
+  resolvedBy       String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Polymorphic relations
+  site         Site?                  @relation(fields: [siteId], references: [id])
+  siteId       String?
+  borehole     Borehole?              @relation(fields: [boreholeId], references: [id])
+  boreholeId   String?
+  pumpTest     PumpTest?              @relation(fields: [pumpTestId], references: [id])
+  pumpTestId   String?
+  waterLevel   WaterLevelMeasurement? @relation(fields: [waterLevelId], references: [id])
+  waterLevelId String?
+  waterQuality WaterQualityReading?   @relation(fields: [waterQualityId], references: [id])
+  waterQualityId String?
+
+  @@index([linkedEntityType, linkedEntityId])
+  @@index([reviewerId])
+  @@index([status])
+}
+
+// ---------- Sync Log ----------
+
+model SyncLog {
+  id            String   @id @default(uuid())
+  userId        String
+  deviceId      String
+  entityType    String
+  entityId      String
+  action        String   // create, update, delete
+  localVersion  Int?
+  serverVersion Int?
+  conflictData  Json?
+  resolvedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([entityType, entityId])
+}

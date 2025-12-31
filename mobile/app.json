@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Aquapack",
+    "slug": "aquapack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0891b2"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aquapack.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Aquapack needs location access to record GPS coordinates for field sites.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Aquapack needs location access to record GPS coordinates for field sites.",
+        "NSCameraUsageDescription": "Aquapack needs camera access to take photos of field sites and equipment.",
+        "NSPhotoLibraryUsageDescription": "Aquapack needs photo library access to attach existing photos to records."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0891b2"
+      },
+      "package": "com.aquapack.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-location",
+      "expo-camera",
+      "expo-image-picker",
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:3000/api/v1"
+    }
+  }
+}
