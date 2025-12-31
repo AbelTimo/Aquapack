@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { projectsApi, sitesApi } from '@/services/api';
 import Map from '@/components/Map';
 import { QAStatusChart } from '@/components/Charts';
+import Pagination from '@/components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 interface EditProjectForm {
   name: string;
@@ -21,6 +24,15 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'sites' | 'map'>('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [siteSearch, setSiteSearch] = useState('');
+  const [siteStatusFilter, setSiteStatusFilter] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [sitesPage, setSitesPage] = useState(1);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setSitesPage(1);
+  }, [siteSearch, siteStatusFilter]);
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ['project', id],
@@ -49,6 +61,14 @@ export default function ProjectDetailPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => projectsApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      navigate('/projects');
+    },
+  });
+
   if (projectLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -60,6 +80,22 @@ export default function ProjectDetailPage() {
   const projectData = project?.data?.project;
   const dashboardData = dashboard?.data;
   const sitesList = Array.isArray(sites?.data?.sites) ? sites.data.sites : [];
+
+  // Filter sites based on search and status
+  const filteredSites = sitesList.filter((site: any) => {
+    const matchesSearch = !siteSearch ||
+      site.name.toLowerCase().includes(siteSearch.toLowerCase()) ||
+      site.code.toLowerCase().includes(siteSearch.toLowerCase());
+    const matchesStatus = !siteStatusFilter || site.qaStatus === siteStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Pagination for filtered sites
+  const sitesTotalPages = Math.ceil(filteredSites.length / ITEMS_PER_PAGE);
+  const paginatedFilteredSites = filteredSites.slice(
+    (sitesPage - 1) * ITEMS_PER_PAGE,
+    sitesPage * ITEMS_PER_PAGE
+  );
 
   if (!projectData) {
     return (
@@ -123,6 +159,15 @@ export default function ProjectDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Generate Report
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="btn-secondary text-red-600 border-red-300 hover:bg-red-50"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete
           </button>
         </div>
       </div>
@@ -219,19 +264,43 @@ export default function ProjectDetailPage() {
       {activeTab === 'sites' && (
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900">All Sites ({sitesList.length})</h2>
+            <h2 className="text-lg font-medium text-gray-900">
+              All Sites ({filteredSites.length}{filteredSites.length !== sitesList.length ? ` of ${sitesList.length}` : ''})
+            </h2>
             <div className="flex space-x-2">
-              <input
-                type="text"
-                placeholder="Search sites..."
-                className="input text-sm"
-              />
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search sites..."
+                  value={siteSearch}
+                  onChange={(e) => setSiteSearch(e.target.value)}
+                  className="input text-sm pl-9 w-48"
+                />
+              </div>
+              <select
+                value={siteStatusFilter}
+                onChange={(e) => setSiteStatusFilter(e.target.value)}
+                className="input text-sm w-auto"
+              >
+                <option value="">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="FLAGGED">Flagged</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
             </div>
           </div>
 
           {sitesList.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No sites yet. Sites will appear here once created from the mobile app.
+            </div>
+          ) : filteredSites.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No sites match your search criteria.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -248,7 +317,7 @@ export default function ProjectDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sitesList.map((site: any) => (
+                  {paginatedFilteredSites.map((site: any) => (
                     <tr key={site.id} className="hover:bg-gray-50">
                       <td>
                         <Link to={`/sites/${site.id}`} className="font-medium text-aqua-600 hover:text-aqua-500">
@@ -280,6 +349,13 @@ export default function ProjectDetailPage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination
+                currentPage={sitesPage}
+                totalPages={sitesTotalPages}
+                onPageChange={setSitesPage}
+                totalItems={filteredSites.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+              />
             </div>
           )}
         </div>
@@ -334,6 +410,49 @@ export default function ProjectDetailPage() {
           dashboardData={dashboardData}
           onClose={() => setShowReportModal(false)}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowDeleteConfirm(false)} />
+            <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+              <div className="bg-white px-4 pb-4 pt-5 sm:p-6">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                    <h3 className="text-lg font-semibold text-gray-900">Delete Project</h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Are you sure you want to delete <strong>{projectData?.name}</strong>? This will permanently remove the project and all associated data. This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
+                <button
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete Project'}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

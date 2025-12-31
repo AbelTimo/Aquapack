@@ -8,6 +8,7 @@ import ProjectsPage from '@/pages/ProjectsPage';
 import ProjectDetailPage from '@/pages/ProjectDetailPage';
 import SitesPage from '@/pages/SitesPage';
 import SiteDetailPage from '@/pages/SiteDetailPage';
+import SettingsPage from '@/pages/SettingsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -81,6 +82,7 @@ function App() {
         <Route path="projects/:id" element={<ProjectDetailPage />} />
         <Route path="sites" element={<SitesPage />} />
         <Route path="sites/:id" element={<SiteDetailPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* Catch all */}

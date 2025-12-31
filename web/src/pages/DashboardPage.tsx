@@ -1,20 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { projectsApi } from '@/services/api';
+import { projectsApi, sitesApi } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
 
-  const { data: projects, isLoading, error } = useQuery({
+  const { data: projects, isLoading } = useQuery({
     queryKey: ['my-projects'],
     queryFn: projectsApi.getMyProjects,
+  });
+
+  const { data: sites } = useQuery({
+    queryKey: ['all-sites'],
+    queryFn: () => sitesApi.getAll({}),
   });
 
   // Safely extract projects array
   const projectsList = Array.isArray(projects?.data?.projects)
     ? projects.data.projects
     : [];
+
+  // Safely extract sites array and calculate stats
+  const sitesList = Array.isArray(sites?.data?.sites) ? sites.data.sites : [];
+  const pendingCount = sitesList.filter((s: any) => s.qaStatus === 'PENDING').length;
+  const flaggedCount = sitesList.filter((s: any) => s.qaStatus === 'FLAGGED').length;
 
   return (
     <div className="space-y-6">
@@ -51,23 +61,25 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Pending Review"
-          value={0}
+          value={pendingCount}
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           }
           color="bg-yellow-500"
+          href="/sites?status=PENDING"
         />
         <StatCard
           title="Flagged"
-          value={0}
+          value={flaggedCount}
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
             </svg>
           }
           color="bg-red-500"
+          href="/sites?status=FLAGGED"
         />
       </div>
 
@@ -165,25 +177,35 @@ function StatCard({
   value,
   icon,
   color,
+  href,
 }: {
   title: string;
   value: number;
   icon: React.ReactNode;
   color: string;
+  href?: string;
 }) {
-  return (
-    <div className="card">
-      <div className="flex items-center">
-        <div className={`flex-shrink-0 p-3 rounded-lg ${color}`}>
-          <div className="text-white">{icon}</div>
-        </div>
-        <div className="ml-4">
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
-        </div>
+  const content = (
+    <div className="flex items-center">
+      <div className={`flex-shrink-0 p-3 rounded-lg ${color}`}>
+        <div className="text-white">{icon}</div>
+      </div>
+      <div className="ml-4">
+        <p className="text-sm font-medium text-gray-500">{title}</p>
+        <p className="text-2xl font-semibold text-gray-900">{value}</p>
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link to={href} className="card hover:border-aqua-300 hover:shadow-md transition-all">
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="card">{content}</div>;
 }
 
 function QuickAction({

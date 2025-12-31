@@ -1,16 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sitesApi, projectsApi } from '@/services/api';
 import Map from '@/components/Map';
+import Pagination from '@/components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 export default function SitesPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const projectId = searchParams.get('projectId');
+  const statusFromUrl = searchParams.get('status') || '';
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>(statusFromUrl);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [sortField, setSortField] = useState<string>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, projectId]);
+
+  // Bulk review mutation
+  const bulkReviewMutation = useMutation({
+    mutationFn: async ({ siteIds, status }: { siteIds: string[]; status: string }) => {
+      // Process each site
+      await Promise.all(siteIds.map(id => sitesApi.review(id, status)));
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites'] });
+      setSelectedSites(new Set());
+      setShowBulkActions(false);
+    },
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedSites.size === paginatedSites.length) {
+      setSelectedSites(new Set());
+    } else {
+      setSelectedSites(new Set(paginatedSites.map((s: any) => s.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedSites);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedSites(newSelected);
+  };
 
   const { data: projects } = useQuery({
     queryKey: ['my-projects'],
@@ -28,6 +76,60 @@ export default function SitesPage() {
 
   const sitesList = Array.isArray(sites?.data?.sites) ? sites.data.sites : [];
   const projectsList = Array.isArray(projects?.data?.projects) ? projects.data.projects : [];
+
+  // Sort sites
+  const sortedSites = [...sitesList].sort((a: any, b: any) => {
+    let aVal = a[sortField];
+    let bVal = b[sortField];
+
+    // Handle nested project name
+    if (sortField === 'project') {
+      aVal = a.project?.name || '';
+      bVal = b.project?.name || '';
+    }
+
+    // Handle string comparison
+    if (typeof aVal === 'string') {
+      aVal = aVal.toLowerCase();
+      bVal = (bVal || '').toLowerCase();
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Pagination (on sorted list)
+  const totalPages = Math.ceil(sortedSites.length / ITEMS_PER_PAGE);
+  const paginatedSites = sortedSites.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const SortIcon = ({ field }: { field: string }) => (
+    <svg
+      className={`w-4 h-4 ml-1 inline-block ${sortField === field ? 'text-aqua-600' : 'text-gray-400'}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      {sortField === field && sortDirection === 'desc' ? (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      )}
+    </svg>
+  );
 
   const mapMarkers = sitesList.map((site: any) => ({
     id: site.id,
@@ -175,22 +277,85 @@ export default function SitesPage() {
         </div>
       ) : (
         <div className="card p-0 overflow-hidden">
+          {/* Bulk Actions Bar */}
+          {selectedSites.size > 0 && (
+            <div className="bg-aqua-50 border-b border-aqua-200 px-4 py-3 flex items-center justify-between">
+              <span className="text-sm text-aqua-700 font-medium">
+                {selectedSites.size} site{selectedSites.size > 1 ? 's' : ''} selected
+              </span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => bulkReviewMutation.mutate({ siteIds: Array.from(selectedSites), status: 'APPROVED' })}
+                  disabled={bulkReviewMutation.isPending}
+                  className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200"
+                >
+                  Approve All
+                </button>
+                <button
+                  onClick={() => bulkReviewMutation.mutate({ siteIds: Array.from(selectedSites), status: 'FLAGGED' })}
+                  disabled={bulkReviewMutation.isPending}
+                  className="px-3 py-1.5 text-sm font-medium text-yellow-700 bg-yellow-100 rounded-md hover:bg-yellow-200"
+                >
+                  Flag All
+                </button>
+                <button
+                  onClick={() => bulkReviewMutation.mutate({ siteIds: Array.from(selectedSites), status: 'REJECTED' })}
+                  disabled={bulkReviewMutation.isPending}
+                  className="px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200"
+                >
+                  Reject All
+                </button>
+                <button
+                  onClick={() => setSelectedSites(new Set())}
+                  className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
           <table className="table">
             <thead>
               <tr>
-                <th>Site Name</th>
-                <th>Code</th>
-                <th>Project</th>
-                <th>Type</th>
+                <th className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedSites.size === paginatedSites.length && paginatedSites.length > 0}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 text-aqua-600 rounded border-gray-300 focus:ring-aqua-500"
+                  />
+                </th>
+                <th className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>
+                  Site Name <SortIcon field="name" />
+                </th>
+                <th className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('code')}>
+                  Code <SortIcon field="code" />
+                </th>
+                <th className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('project')}>
+                  Project <SortIcon field="project" />
+                </th>
+                <th className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('siteType')}>
+                  Type <SortIcon field="siteType" />
+                </th>
                 <th>Coordinates</th>
-                <th>Status</th>
+                <th className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('qaStatus')}>
+                  Status <SortIcon field="qaStatus" />
+                </th>
                 <th>Data</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sitesList.map((site: any) => (
-                <tr key={site.id} className="hover:bg-gray-50">
+              {paginatedSites.map((site: any) => (
+                <tr key={site.id} className={`hover:bg-gray-50 ${selectedSites.has(site.id) ? 'bg-aqua-50' : ''}`}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedSites.has(site.id)}
+                      onChange={() => toggleSelect(site.id)}
+                      className="h-4 w-4 text-aqua-600 rounded border-gray-300 focus:ring-aqua-500"
+                    />
+                  </td>
                   <td>
                     <Link to={`/sites/${site.id}`} className="font-medium text-aqua-600 hover:text-aqua-500">
                       {site.name}
@@ -227,6 +392,13 @@ export default function SitesPage() {
               ))}
             </tbody>
           </table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={sitesList.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+          />
         </div>
       )}
     </div>
