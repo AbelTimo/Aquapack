@@ -21,6 +21,7 @@
     "axios": "^1.6.5",
     "date-fns": "^3.2.0",
     "expo": "~50.0.0",
+    "expo-av": "~13.10.4",
     "expo-camera": "~14.0.1",
     "expo-file-system": "~16.0.4",
     "expo-image-picker": "~14.7.1",

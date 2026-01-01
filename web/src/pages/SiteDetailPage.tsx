@@ -148,22 +148,34 @@ export default function SiteDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-4 gap-4">
-            <div className="card text-center bg-blue-50 border-0">
+            <button
+              onClick={() => setActiveTab('boreholes')}
+              className={`card text-center bg-blue-50 border-0 cursor-pointer hover:shadow-md transition-shadow ${activeTab === 'boreholes' ? 'ring-2 ring-blue-500' : ''}`}
+            >
               <p className="text-2xl font-bold text-blue-700">{boreholes.length}</p>
               <p className="text-sm text-blue-600">Boreholes</p>
-            </div>
-            <div className="card text-center bg-cyan-50 border-0">
+            </button>
+            <button
+              onClick={() => setActiveTab('measurements')}
+              className={`card text-center bg-cyan-50 border-0 cursor-pointer hover:shadow-md transition-shadow ${activeTab === 'measurements' ? 'ring-2 ring-cyan-500' : ''}`}
+            >
               <p className="text-2xl font-bold text-cyan-700">{waterLevels.length}</p>
               <p className="text-sm text-cyan-600">Water Levels</p>
-            </div>
-            <div className="card text-center bg-purple-50 border-0">
+            </button>
+            <button
+              onClick={() => setActiveTab('details')}
+              className="card text-center bg-purple-50 border-0 cursor-pointer hover:shadow-md transition-shadow"
+            >
               <p className="text-2xl font-bold text-purple-700">{pumpTests.length}</p>
               <p className="text-sm text-purple-600">Pump Tests</p>
-            </div>
-            <div className="card text-center bg-green-50 border-0">
+            </button>
+            <button
+              onClick={() => setActiveTab('quality')}
+              className={`card text-center bg-green-50 border-0 cursor-pointer hover:shadow-md transition-shadow ${activeTab === 'quality' ? 'ring-2 ring-green-500' : ''}`}
+            >
               <p className="text-2xl font-bold text-green-700">{waterQuality.length}</p>
               <p className="text-sm text-green-600">WQ Samples</p>
-            </div>
+            </button>
           </div>
 
           {/* Map */}

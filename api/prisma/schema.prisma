@@ -392,6 +392,7 @@ model Media {
   capturedAt       DateTime?
   latitude         Float?
   longitude        Float?
+  duration         Int?       // Duration in seconds (for audio/video files)
   syncStatus       SyncStatus @default(SYNCED)
   deviceId         String?
   localId          String?

@@ -189,22 +189,34 @@ export default function SitesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="card text-center py-4">
+        <button
+          onClick={() => setStatusFilter('')}
+          className={`card text-center py-4 cursor-pointer hover:shadow-md transition-shadow ${!statusFilter ? 'ring-2 ring-aqua-500' : ''}`}
+        >
           <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
           <p className="text-sm text-gray-500">Total Sites</p>
-        </div>
-        <div className="card text-center py-4 bg-green-50 border-0">
+        </button>
+        <button
+          onClick={() => setStatusFilter('APPROVED')}
+          className={`card text-center py-4 bg-green-50 border-0 cursor-pointer hover:shadow-md transition-shadow ${statusFilter === 'APPROVED' ? 'ring-2 ring-green-500' : ''}`}
+        >
           <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
           <p className="text-sm text-green-600">Approved</p>
-        </div>
-        <div className="card text-center py-4 bg-yellow-50 border-0">
+        </button>
+        <button
+          onClick={() => setStatusFilter('PENDING')}
+          className={`card text-center py-4 bg-yellow-50 border-0 cursor-pointer hover:shadow-md transition-shadow ${statusFilter === 'PENDING' ? 'ring-2 ring-yellow-500' : ''}`}
+        >
           <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
           <p className="text-sm text-yellow-600">Pending</p>
-        </div>
-        <div className="card text-center py-4 bg-red-50 border-0">
+        </button>
+        <button
+          onClick={() => setStatusFilter('FLAGGED')}
+          className={`card text-center py-4 bg-red-50 border-0 cursor-pointer hover:shadow-md transition-shadow ${statusFilter === 'FLAGGED' ? 'ring-2 ring-red-500' : ''}`}
+        >
           <p className="text-2xl font-bold text-red-700">{stats.flagged}</p>
           <p className="text-sm text-red-600">Flagged</p>
-        </div>
+        </button>
       </div>
 
       {/* Filters */}

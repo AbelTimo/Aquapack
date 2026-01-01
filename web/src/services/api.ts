@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import type { ApiResponse } from '@/types';
-import { isDemoMode, mockAuthApi, mockProjectsApi, mockSitesApi } from './mockApi';
+import { isDemoMode, mockAuthApi, mockProjectsApi, mockSitesApi, mockBoreholesApi } from './mockApi';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -137,7 +137,7 @@ export const projectsApi = {
     return response.data;
   },
 
-  create: async (data: { name: string; code: string; client?: string; region?: string; description?: string }) => {
+  create: async (data: any) => {
     if (isDemoMode()) {
       return mockProjectsApi.create(data);
     }
@@ -145,7 +145,7 @@ export const projectsApi = {
     return response.data;
   },
 
-  update: async (id: string, data: Partial<{ name: string; code: string; client?: string; region?: string; description?: string }>) => {
+  update: async (id: string, data: any) => {
     if (isDemoMode()) {
       return mockProjectsApi.update(id, data);
     }
@@ -222,6 +222,17 @@ export const sitesApi = {
       return mockSitesApi.review(id, status, comment);
     }
     const response = await api.post(`/sites/${id}/review`, { status, comment });
+    return response.data;
+  },
+};
+
+// Boreholes API
+export const boreholesApi = {
+  getAll: async (params?: { siteId?: string; boreholeStatus?: string }) => {
+    if (isDemoMode()) {
+      return mockBoreholesApi.getAll(params);
+    }
+    const response = await api.get('/boreholes', { params });
     return response.data;
   },
 };

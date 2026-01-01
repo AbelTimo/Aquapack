@@ -220,3 +220,49 @@ export function WaterQualityChart({ data }: WaterQualityChartProps) {
 
   return <Bar data={chartData} options={options} />;
 }
+
+interface BoreholeStatusChartProps {
+  drilling: number;
+  completed: number;
+  operational: number;
+  abandoned: number;
+}
+
+export function BoreholeStatusChart({ drilling, completed, operational, abandoned }: BoreholeStatusChartProps) {
+  const chartData = {
+    labels: ['Drilling', 'Completed', 'Operational', 'Abandoned'],
+    datasets: [
+      {
+        data: [drilling, completed, operational, abandoned],
+        backgroundColor: [
+          'rgba(245, 158, 11, 0.8)',   // yellow for drilling
+          'rgba(59, 130, 246, 0.8)',   // blue for completed
+          'rgba(16, 185, 129, 0.8)',   // green for operational
+          'rgba(239, 68, 68, 0.8)',    // red for abandoned
+        ],
+        borderColor: [
+          'rgb(245, 158, 11)',
+          'rgb(59, 130, 246)',
+          'rgb(16, 185, 129)',
+          'rgb(239, 68, 68)',
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'right' as const,
+      },
+      title: {
+        display: true,
+        text: 'Borehole Status Distribution',
+      },
+    },
+  };
+
+  return <Doughnut data={chartData} options={options} />;
+}

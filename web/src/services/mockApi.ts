@@ -157,8 +157,17 @@ export const mockProjectsApi = {
     };
   },
 
-  create: async (data: Partial<Project>): Promise<ApiResponse<{ project: Project }>> => {
+  create: async (data: any): Promise<ApiResponse<{ project: Project }>> => {
     await delay(500);
+
+    // Build enabled modules array from form data
+    const enabledModules: string[] = [];
+    if (data.enableBoreholes) enabledModules.push('boreholes');
+    if (data.enableWaterLevels) enabledModules.push('waterLevels');
+    if (data.enablePumpTests) enabledModules.push('pumpTests');
+    if (data.enableWaterQuality) enabledModules.push('waterQuality');
+    if (data.enableMedia) enabledModules.push('media');
+
     const newProject: Project = {
       id: 'proj-' + Date.now(),
       name: data.name || 'New Project',
@@ -166,8 +175,23 @@ export const mockProjectsApi = {
       client: data.client,
       region: data.region,
       description: data.description,
+      startDate: data.startDate,
+      endDate: data.endDate,
       organizationId: 'demo-org-1',
       isActive: true,
+      templateConfig: {
+        clientContact: data.clientContact,
+        clientEmail: data.clientEmail,
+        clientPhone: data.clientPhone,
+        country: data.country,
+        defaultUnits: {
+          depth: data.depthUnit || 'meters',
+          discharge: data.dischargeUnit || 'l/s',
+        },
+        coordinateSystem: data.coordinateSystem || 'WGS84',
+        gpsAccuracyThreshold: data.gpsAccuracyThreshold || 10,
+        enabledModules,
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       _count: { sites: 0 },
@@ -181,7 +205,7 @@ export const mockProjectsApi = {
     };
   },
 
-  update: async (id: string, data: Partial<Project>): Promise<ApiResponse<{ project: Project }>> => {
+  update: async (id: string, data: any): Promise<ApiResponse<{ project: Project }>> => {
     await delay(400);
     const index = mockProjects.findIndex(p => p.id === id);
 
@@ -197,9 +221,37 @@ export const mockProjectsApi = {
       };
     }
 
+    // Build enabled modules array from form data
+    const enabledModules: string[] = [];
+    if (data.enableBoreholes) enabledModules.push('boreholes');
+    if (data.enableWaterLevels) enabledModules.push('waterLevels');
+    if (data.enablePumpTests) enabledModules.push('pumpTests');
+    if (data.enableWaterQuality) enabledModules.push('waterQuality');
+    if (data.enableMedia) enabledModules.push('media');
+
     mockProjects[index] = {
       ...mockProjects[index],
-      ...data,
+      name: data.name,
+      code: data.code,
+      client: data.client,
+      region: data.region,
+      description: data.description,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      isActive: data.isActive ?? mockProjects[index].isActive,
+      templateConfig: {
+        clientContact: data.clientContact,
+        clientEmail: data.clientEmail,
+        clientPhone: data.clientPhone,
+        country: data.country,
+        defaultUnits: {
+          depth: data.depthUnit || 'meters',
+          discharge: data.dischargeUnit || 'l/s',
+        },
+        coordinateSystem: data.coordinateSystem || 'WGS84',
+        gpsAccuracyThreshold: data.gpsAccuracyThreshold || 10,
+        enabledModules,
+      },
       updatedAt: new Date().toISOString(),
     };
 
@@ -385,6 +437,29 @@ export const mockSitesApi = {
     return {
       success: true,
       data: { site: mockSites[index] },
+    };
+  },
+};
+
+// Mock Boreholes API
+export const mockBoreholesApi = {
+  getAll: async (params?: { siteId?: string; boreholeStatus?: string }): Promise<ApiResponse<{ boreholes: typeof mockBoreholes }>> => {
+    await delay(400);
+
+    let boreholes = [...mockBoreholes];
+
+    if (params?.siteId) {
+      boreholes = boreholes.filter(b => b.siteId === params.siteId);
+    }
+
+    if (params?.boreholeStatus) {
+      boreholes = boreholes.filter(b => b.boreholeStatus === params.boreholeStatus);
+    }
+
+    return {
+      success: true,
+      data: { boreholes },
+      meta: { total: boreholes.length },
     };
   },
 };

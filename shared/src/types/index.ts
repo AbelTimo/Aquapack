@@ -300,6 +300,7 @@ export interface Media extends BaseEntity {
   caption?: string;
   capturedAt?: string;
   location?: GeoLocation;
+  duration?: number; // Duration in seconds (for audio/video files)
 }
 
 // ---------- Review & Comments ----------

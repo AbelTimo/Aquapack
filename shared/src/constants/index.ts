@@ -159,7 +159,20 @@ export const FILE_LIMITS = {
   maxFileSizeBytes: 50 * 1024 * 1024,
   allowedImageTypes: ['image/jpeg', 'image/png', 'image/heic', 'image/webp'],
   allowedDocTypes: ['application/pdf'],
+  allowedAudioTypes: ['audio/m4a', 'audio/mp4', 'audio/aac', 'audio/mpeg'],
   maxPhotosPerRecord: 10,
+  maxVoiceNotesPerRecord: 5,
+} as const;
+
+// ---------- Audio/Voice Note Limits ----------
+
+export const AUDIO_LIMITS = {
+  maxDurationSeconds: 120, // 2 minutes
+  maxFileSizeMB: 10,
+  maxFileSizeBytes: 10 * 1024 * 1024,
+  allowedAudioTypes: ['audio/m4a', 'audio/mp4', 'audio/aac', 'audio/mpeg'],
+  sampleRate: 44100,
+  bitRate: 128000,
 } as const;
 
 // ---------- Report Templates ----------

@@ -17,6 +17,20 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
+export interface ProjectTemplateConfig {
+  clientContact?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  country?: string;
+  defaultUnits?: {
+    depth: 'meters' | 'feet';
+    discharge: 'l/s' | 'm3/h' | 'gpm';
+  };
+  coordinateSystem?: 'WGS84' | 'UTM';
+  gpsAccuracyThreshold?: number;
+  enabledModules?: string[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -24,8 +38,11 @@ export interface Project {
   client?: string;
   region?: string;
   description?: string;
+  startDate?: string;
+  endDate?: string;
   organizationId: string;
   isActive: boolean;
+  templateConfig?: ProjectTemplateConfig;
   createdAt: string;
   updatedAt: string;
   _count?: {

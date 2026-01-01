@@ -253,6 +253,7 @@ export const createMediaSchema = z.object({
   caption: z.string().max(500).optional(),
   capturedAt: z.string().datetime().optional(),
   location: geoLocationSchema.optional(),
+  duration: z.number().min(0).max(120).optional(), // Duration in seconds for audio/video (max 2 min)
 });
 
 // ---------- Review Validators ----------

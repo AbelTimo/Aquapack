@@ -47,6 +47,7 @@ export default function DashboardPage() {
             </svg>
           }
           color="bg-blue-500"
+          href="/projects"
         />
         <StatCard
           title="Total Sites"
@@ -58,6 +59,7 @@ export default function DashboardPage() {
             </svg>
           }
           color="bg-green-500"
+          href="/sites"
         />
         <StatCard
           title="Pending Review"

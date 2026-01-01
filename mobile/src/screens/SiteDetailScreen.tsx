@@ -9,9 +9,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getSiteById, getBoreholesBySite, getWaterLevelsBySite, LocalSite, LocalBorehole, LocalWaterLevel } from '../services/database';
+import VoiceNotesSection from '../components/VoiceNotesSection';
+import { useAuthStore } from '../store/authStore';
 
 export default function SiteDetailScreen({ navigation, route }: any) {
   const { siteId } = route.params;
+  const { user } = useAuthStore();
 
   const [site, setSite] = useState<LocalSite | null>(null);
   const [boreholes, setBoreholes] = useState<LocalBorehole[]>([]);
@@ -123,6 +126,15 @@ export default function SiteDetailScreen({ navigation, route }: any) {
             onPress={() => navigation.navigate('WaterQualityForm', { siteId: site.id, boreholes })}
           />
         </View>
+      </View>
+
+      {/* Voice Notes */}
+      <View style={styles.voiceNotesContainer}>
+        <VoiceNotesSection
+          entityType="site"
+          entityId={site.id}
+          createdBy={user?.id}
+        />
       </View>
 
       {/* Boreholes */}
@@ -245,6 +257,9 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     padding: 16,
+  },
+  voiceNotesContainer: {
+    paddingHorizontal: 16,
   },
   actionsGrid: {
     flexDirection: 'row',

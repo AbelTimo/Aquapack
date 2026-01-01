@@ -168,7 +168,7 @@ export const initDatabase = async (): Promise<void> => {
       FOREIGN KEY (boreholeId) REFERENCES boreholes(id)
     );
 
-    -- Media (photos)
+    -- Media (photos, voice notes)
     CREATE TABLE IF NOT EXISTS media (
       id TEXT PRIMARY KEY,
       localId TEXT UNIQUE,
@@ -183,7 +183,9 @@ export const initDatabase = async (): Promise<void> => {
       capturedAt TEXT,
       latitude REAL,
       longitude REAL,
+      duration INTEGER,
       syncStatus TEXT DEFAULT 'PENDING',
+      createdBy TEXT,
       createdAt TEXT
     );
 
@@ -212,7 +214,27 @@ export const initDatabase = async (): Promise<void> => {
     );
   `);
 
+  // Run migrations for existing databases
+  await runMigrations();
+
   console.log('Database initialized');
+};
+
+// Run migrations for schema updates
+const runMigrations = async (): Promise<void> => {
+  // Add duration column to media table if not exists
+  try {
+    await db.runAsync('ALTER TABLE media ADD COLUMN duration INTEGER');
+  } catch {
+    // Column already exists, ignore
+  }
+
+  // Add createdBy column to media table if not exists
+  try {
+    await db.runAsync('ALTER TABLE media ADD COLUMN createdBy TEXT');
+  } catch {
+    // Column already exists, ignore
+  }
 };
 
 export const getDatabase = (): SQLite.SQLiteDatabase => {
@@ -442,6 +464,118 @@ export const getWaterLevelsBySite = async (siteId: string): Promise<LocalWaterLe
 };
 
 // ============================================
+// MEDIA (Photos, Voice Notes)
+// ============================================
+
+export interface LocalMedia {
+  id: string;
+  localId: string;
+  linkedEntityType: string;
+  linkedEntityId: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  localPath: string;
+  remoteUrl?: string;
+  caption?: string;
+  capturedAt?: string;
+  latitude?: number;
+  longitude?: number;
+  duration?: number;
+  syncStatus: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export const createMedia = async (
+  media: Omit<LocalMedia, 'id' | 'localId' | 'createdAt' | 'syncStatus'>
+): Promise<LocalMedia> => {
+  const id = generateId();
+  const localId = id;
+  const timestamp = now();
+
+  await db.runAsync(
+    `INSERT INTO media (id, localId, linkedEntityType, linkedEntityId, fileName, fileType, fileSize, localPath, remoteUrl, caption, capturedAt, latitude, longitude, duration, syncStatus, createdBy, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      localId,
+      media.linkedEntityType,
+      media.linkedEntityId,
+      media.fileName,
+      media.fileType,
+      media.fileSize,
+      media.localPath,
+      media.remoteUrl || null,
+      media.caption || null,
+      media.capturedAt || null,
+      media.latitude || null,
+      media.longitude || null,
+      media.duration || null,
+      'PENDING',
+      media.createdBy || null,
+      timestamp,
+    ]
+  );
+
+  await addToSyncQueue('media', id, 'create');
+
+  return {
+    id,
+    localId,
+    ...media,
+    syncStatus: 'PENDING',
+    createdAt: timestamp,
+  };
+};
+
+export const getMediaByEntity = async (
+  entityType: string,
+  entityId: string
+): Promise<LocalMedia[]> => {
+  return db.getAllAsync<LocalMedia>(
+    'SELECT * FROM media WHERE linkedEntityType = ? AND linkedEntityId = ? ORDER BY createdAt DESC',
+    [entityType, entityId]
+  );
+};
+
+export const getVoiceNotesByEntity = async (
+  entityType: string,
+  entityId: string
+): Promise<LocalMedia[]> => {
+  return db.getAllAsync<LocalMedia>(
+    `SELECT * FROM media
+     WHERE linkedEntityType = ? AND linkedEntityId = ?
+     AND fileType LIKE 'audio/%'
+     ORDER BY createdAt DESC`,
+    [entityType, entityId]
+  );
+};
+
+export const deleteMedia = async (id: string): Promise<void> => {
+  await db.runAsync('DELETE FROM media WHERE id = ? OR localId = ?', [id, id]);
+  await addToSyncQueue('media', id, 'delete');
+};
+
+export const updateMediaSyncStatus = async (
+  id: string,
+  syncStatus: string,
+  remoteUrl?: string
+): Promise<void> => {
+  if (remoteUrl) {
+    await db.runAsync(
+      'UPDATE media SET syncStatus = ?, remoteUrl = ? WHERE id = ? OR localId = ?',
+      [syncStatus, remoteUrl, id, id]
+    );
+  } else {
+    await db.runAsync(
+      'UPDATE media SET syncStatus = ? WHERE id = ? OR localId = ?',
+      [syncStatus, id, id]
+    );
+  }
+};
+
+// ============================================
 // PROJECTS
 // ============================================
 
@@ -547,6 +681,11 @@ export default {
   getBoreholesBySite,
   createWaterLevel,
   getWaterLevelsBySite,
+  createMedia,
+  getMediaByEntity,
+  getVoiceNotesByEntity,
+  deleteMedia,
+  updateMediaSyncStatus,
   saveProjects,
   getProjects,
   addToSyncQueue,
