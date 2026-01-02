@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/store/authStore';
@@ -14,13 +14,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
-  const { setAuth, logout } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const navigate = useNavigate();
-
-  // Clear any stale state on login page mount
-  useEffect(() => {
-    localStorage.removeItem('aquapack-demo-mode');
-  }, []);
 
   const {
     register,
@@ -48,14 +43,11 @@ export default function LoginPage() {
     setIsDemoLoading(true);
 
     try {
-      // Enable demo mode first
       localStorage.setItem('aquapack-demo-mode', 'true');
-
       const response = await authApi.login(DEMO_CREDENTIALS.email, DEMO_CREDENTIALS.password);
 
       if (response?.data?.user && response?.data?.tokens) {
         setAuth(response.data.user, response.data.tokens);
-        // Use hard redirect to ensure clean state
         window.location.href = '/dashboard';
       } else {
         setError('Invalid response from demo login');
@@ -69,43 +61,98 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto w-16 h-16 bg-aqua-600 rounded-2xl flex items-center justify-center">
-            <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
+    <div className="min-h-screen flex">
+      {/* Left side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-aqua-600 via-aqua-700 to-aqua-900 relative overflow-hidden">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '40px 40px'
+          }} />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+            </div>
+            <span className="text-2xl font-bold">Aquapack</span>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to Aquapack
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Hydrogeology Field Data Management
+
+          {/* Main content */}
+          <div className="max-w-md">
+            <h1 className="text-4xl font-bold mb-6 leading-tight">
+              Hydrogeology Field Data Management
+            </h1>
+            <p className="text-xl text-aqua-100 mb-8">
+              Collect, manage, and analyze groundwater data with ease. From borehole logging to water quality monitoring.
+            </p>
+
+            {/* Features */}
+            <div className="space-y-4">
+              {[
+                { icon: '📍', text: 'GPS-enabled site documentation' },
+                { icon: '📊', text: 'Real-time data visualization' },
+                { icon: '📱', text: 'Offline-first mobile app' },
+                { icon: '✅', text: 'Quality assurance workflows' },
+              ].map((feature, i) => (
+                <div key={i} className="flex items-center gap-3 text-aqua-100">
+                  <span className="text-xl">{feature.icon}</span>
+                  <span>{feature.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <p className="text-sm text-aqua-200">
+            Trusted by hydrogeology teams worldwide
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        {/* Decorative elements */}
+        <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -right-10 w-60 h-60 bg-aqua-400/20 rounded-full blur-2xl" />
+      </div>
+
+      {/* Right side - Login form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-md">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-gradient-to-br from-aqua-500 to-aqua-700 rounded-xl flex items-center justify-center shadow-lg shadow-aqua-500/30">
+              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+            </div>
+            <span className="text-2xl font-bold text-gray-900">Aquapack</span>
+          </div>
+
+          {/* Header */}
+          <div className="text-center lg:text-left mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+            <p className="mt-2 text-gray-600">Sign in to your account to continue</p>
+          </div>
+
+          {/* Error message */}
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              </div>
+            <div className="alert-error mb-6 animate-slide-down">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
+          {/* Login form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="form-group">
+              <label htmlFor="email" className="label">Email address</label>
               <input
                 {...register('email', {
                   required: 'Email is required',
@@ -115,15 +162,23 @@ export default function LoginPage() {
                   },
                 })}
                 type="email"
+                id="email"
                 autoComplete="email"
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-aqua-500 focus:border-aqua-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                className={`input ${errors.email ? 'input-error' : ''}`}
+                placeholder="you@example.com"
               />
+              {errors.email && (
+                <p className="form-error">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.email.message}
+                </p>
+              )}
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
+
+            <div className="form-group">
+              <label htmlFor="password" className="label">Password</label>
               <input
                 {...register('password', {
                   required: 'Password is required',
@@ -133,73 +188,81 @@ export default function LoginPage() {
                   },
                 })}
                 type="password"
+                id="password"
                 autoComplete="current-password"
-                className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-aqua-500 focus:border-aqua-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                className={`input ${errors.password ? 'input-error' : ''}`}
+                placeholder="Enter your password"
               />
+              {errors.password && (
+                <p className="form-error">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.password.message}
+                </p>
+              )}
             </div>
-          </div>
 
-          {(errors.email || errors.password) && (
-            <div className="text-sm text-red-600">
-              {errors.email?.message || errors.password?.message}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="checkbox" />
+                <span className="text-sm text-gray-600">Remember me</span>
+              </label>
+              <a href="#" className="text-sm font-medium text-aqua-600 hover:text-aqua-700">
+                Forgot password?
+              </a>
             </div>
-          )}
 
-          <div className="space-y-3">
             <button
               type="submit"
               disabled={isLoading || isDemoLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-aqua-600 hover:bg-aqua-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-aqua-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full btn-lg"
             >
               {isLoading ? (
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <>
+                  <span className="spinner spinner-sm" />
+                  Signing in...
+                </>
               ) : (
                 'Sign in'
               )}
             </button>
+          </form>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">Or</span>
-              </div>
-            </div>
+          {/* Divider */}
+          <div className="divider-text my-6">or continue with</div>
 
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={isLoading || isDemoLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border-2 border-aqua-600 text-sm font-medium rounded-md text-aqua-600 bg-white hover:bg-aqua-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-aqua-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isDemoLoading ? (
-                <svg className="animate-spin h-5 w-5 text-aqua-600" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          {/* Demo login */}
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={isLoading || isDemoLoading}
+            className="btn-outline w-full btn-lg"
+          >
+            {isDemoLoading ? (
+              <>
+                <span className="spinner spinner-sm" />
+                Loading demo...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  Try Demo Mode
-                </>
-              )}
-            </button>
-          </div>
+                Try Demo Mode
+              </>
+            )}
+          </button>
 
-          <div className="text-center">
-            <Link to="/register" className="font-medium text-aqua-600 hover:text-aqua-500">
-              Don't have an account? Sign up
+          {/* Sign up link */}
+          <p className="mt-8 text-center text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/register" className="font-semibold text-aqua-600 hover:text-aqua-700">
+              Create an account
             </Link>
-          </div>
-        </form>
+          </p>
+        </div>
       </div>
     </div>
   );

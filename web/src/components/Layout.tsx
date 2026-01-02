@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/services/api';
 import { isDemoMode, disableDemoMode } from '@/services/mockApi';
@@ -45,10 +45,47 @@ function SettingsIcon({ className }: { className?: string }) {
   );
 }
 
+function LogoutIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+    </svg>
+  );
+}
+
+function BellIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+  );
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const { user, logout } = useAuthStore();
+
+  // Sample notifications for demo
+  const notifications = [
+    { id: 1, type: 'pending', title: 'New site pending review', message: 'Site BH-2024-015 needs QA review', time: '5 min ago', unread: true },
+    { id: 2, type: 'flagged', title: 'Site flagged for issues', message: 'Site WL-2024-008 has data quality issues', time: '1 hour ago', unread: true },
+    { id: 3, type: 'approved', title: 'Site approved', message: 'Site BH-2024-012 was approved by Admin', time: '3 hours ago', unread: false },
+    { id: 4, type: 'sync', title: 'Sync completed', message: '5 sites synced from mobile app', time: 'Yesterday', unread: false },
+  ];
+
+  const unreadCount = notifications.filter(n => n.unread).length;
   const navigate = useNavigate();
+  const location = useLocation();
   const demoMode = isDemoMode();
 
   const handleLogout = async () => {
@@ -62,108 +99,346 @@ export default function Layout() {
     navigate('/login');
   };
 
+  // Get page title based on current route
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path.startsWith('/projects/') && path !== '/projects') return 'Project Details';
+    if (path.startsWith('/sites/') && path !== '/sites') return 'Site Details';
+    const currentNav = navigation.find(n => n.href === path);
+    return currentNav?.name || 'Dashboard';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       {/* Demo mode banner */}
       {demoMode && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-amber-900 text-center py-1 text-sm font-medium">
-          Demo Mode - Using sample data. Changes won't persist.
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2 text-sm font-medium shadow-md">
+          <div className="flex items-center justify-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Demo Mode - Using sample data. Changes won't persist.
+          </div>
         </div>
       )}
 
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden animate-fade-in"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div
-        className={`fixed left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+      <aside
+        className={`fixed left-0 z-40 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${demoMode ? 'top-7 h-[calc(100%-1.75rem)]' : 'inset-y-0'}`}
+        } ${demoMode ? 'top-10 h-[calc(100%-2.5rem)]' : 'inset-y-0 h-full'}`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-aqua-600 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex items-center h-16 px-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-aqua-500 to-aqua-700 rounded-xl flex items-center justify-center shadow-lg shadow-aqua-500/30">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-gray-900">Aquapack</span>
+              <div>
+                <span className="text-xl font-bold text-gray-900">Aquapack</span>
+                <p className="text-xs text-gray-500">Field Data Management</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Search (optional) */}
+          <div className="px-4 py-4">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-aqua-500/20 focus:bg-white transition-all"
+              />
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+            <p className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu</p>
             {navigation.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.href}
+                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-aqua-50 text-aqua-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`
+                  `nav-item group ${isActive ? 'active' : ''}`
                 }
               >
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.name}
+                <item.icon className="nav-item-icon" />
+                <span className="flex-1">{item.name}</span>
+                {item.name === 'Sites' && (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                    3
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>
 
-          {/* User menu */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-aqua-100 flex items-center justify-center">
-                <span className="text-aqua-700 font-medium">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </span>
+          {/* Quick Stats */}
+          <div className="px-4 py-4 border-t border-gray-100">
+            <div className="bg-gradient-to-br from-aqua-50 to-aqua-100 rounded-xl p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-aqua-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-aqua-600 font-medium">This Week</p>
+                  <p className="text-lg font-bold text-aqua-900">12 Sites</p>
+                </div>
               </div>
-              <div className="ml-3 flex-1 min-w-0">
+              <div className="w-full bg-aqua-200 rounded-full h-1.5">
+                <div className="bg-aqua-600 h-1.5 rounded-full" style={{ width: '75%' }}></div>
+              </div>
+              <p className="text-xs text-aqua-700 mt-2">75% reviewed</p>
+            </div>
+          </div>
+
+          {/* User info and Sign Out (Mobile) */}
+          <div className="px-4 py-4 border-t border-gray-100 lg:hidden">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="avatar-md">
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
                 <p className="text-xs text-gray-500 truncate">{user?.email}</p>
               </div>
-              <button
-                onClick={handleLogout}
-                className="ml-2 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                title="Logout"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
             </div>
+            <button
+              onClick={() => {
+                setSidebarOpen(false);
+                handleLogout();
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
+            >
+              <LogoutIcon className="w-4 h-4" />
+              Sign Out
+            </button>
           </div>
+
         </div>
-      </div>
+      </aside>
 
       {/* Main content */}
-      <div className={`lg:pl-64 ${demoMode ? 'pt-7' : ''}`}>
+      <div className={`lg:pl-72 min-h-screen ${demoMode ? 'pt-10' : ''}`}>
         {/* Top bar */}
-        <div className={`sticky z-10 flex items-center h-16 px-4 bg-white border-b border-gray-200 lg:hidden ${demoMode ? 'top-7' : 'top-0'}`}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 text-gray-500 hover:text-gray-600"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <span className="ml-4 text-lg font-semibold text-gray-900">Aquapack</span>
-        </div>
+        <header className={`sticky z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 ${demoMode ? 'top-10' : 'top-0'}`}>
+          <div className="flex items-center justify-between h-16 px-4 lg:px-8">
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              aria-label="Open menu"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+
+            {/* Page title */}
+            <div className="hidden lg:block">
+              <h1 className="text-xl font-semibold text-gray-900">{getPageTitle()}</h1>
+            </div>
+            <span className="lg:hidden text-lg font-semibold text-gray-900">Aquapack</span>
+
+            {/* Right side actions */}
+            <div className="flex items-center gap-2">
+              {/* Notifications */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <BellIcon className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-slide-down">
+                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <span className="text-xs font-medium text-aqua-600 bg-aqua-50 px-2 py-1 rounded-full">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.map((notification) => (
+                        <button
+                          key={notification.id}
+                          onClick={() => {
+                            setShowNotifications(false);
+                            navigate('/sites');
+                          }}
+                          className={`w-full p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 ${
+                            notification.unread ? 'bg-aqua-50/50' : ''
+                          }`}
+                        >
+                          <div className="flex gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              notification.type === 'pending' ? 'bg-amber-100' :
+                              notification.type === 'flagged' ? 'bg-rose-100' :
+                              notification.type === 'approved' ? 'bg-emerald-100' :
+                              'bg-aqua-100'
+                            }`}>
+                              {notification.type === 'pending' && (
+                                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              )}
+                              {notification.type === 'flagged' && (
+                                <svg className="w-5 h-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                              )}
+                              {notification.type === 'approved' && (
+                                <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              )}
+                              {notification.type === 'sync' && (
+                                <svg className="w-5 h-5 text-aqua-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm ${notification.unread ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5 truncate">{notification.message}</p>
+                              <p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+                            </div>
+                            {notification.unread && (
+                              <div className="w-2 h-2 bg-aqua-500 rounded-full flex-shrink-0 mt-2"></div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-3 border-t border-gray-100 bg-gray-50">
+                      <button
+                        onClick={() => {
+                          setShowNotifications(false);
+                          navigate('/sites?status=PENDING');
+                        }}
+                        className="w-full text-center text-sm font-medium text-aqua-600 hover:text-aqua-700"
+                      >
+                        View all notifications
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* User avatar (desktop) */}
+              <div className="hidden lg:block relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-3 pl-4 border-l border-gray-200 hover:bg-gray-50 rounded-xl p-2 -m-2 transition-colors"
+                >
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                    <p className="text-xs text-gray-500">{user?.email}</p>
+                  </div>
+                  <div className="avatar-md">
+                    {user?.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <svg className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* User Dropdown */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-slide-down">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                      <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{user?.email}</p>
+                      <span className="inline-block mt-2 text-xs font-medium text-aqua-600 bg-aqua-50 px-2 py-0.5 rounded-full">
+                        {user?.role?.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div className="py-2">
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          navigate('/settings');
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <SettingsIcon className="w-4 h-4 text-gray-400" />
+                        Account Settings
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          navigate('/settings');
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Help & Support
+                      </button>
+                    </div>
+                    <div className="border-t border-gray-100 py-2">
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogoutIcon className="w-4 h-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </header>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="p-4 lg:p-8 animate-fade-in">
           <Outlet />
         </main>
       </div>
+
+      {/* Click outside to close dropdowns */}
+      {(showUserMenu || showNotifications) && (
+        <div
+          className="fixed inset-0 z-30"
+          onClick={() => {
+            setShowUserMenu(false);
+            setShowNotifications(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -467,5 +467,5 @@ export const mockDashboard: ProjectDashboard = {
 // Demo credentials
 export const DEMO_CREDENTIALS = {
   email: 'demo@aquapack.io',
-  password: 'demo123',
+  password: 'demo1234',
 };

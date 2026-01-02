@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/store/authStore';
-import { authApi } from '@/services/api';
 
 interface ProfileForm {
   name: string;
@@ -16,7 +15,7 @@ interface PasswordForm {
 }
 
 export default function SettingsPage() {
-  const { user, setUser } = useAuthStore();
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'preferences'>('profile');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -87,7 +86,6 @@ function ProfileSection({
   user: any;
   onSuccess: (message: string) => void;
 }) {
-  const { setUser } = useAuthStore();
   const {
     register,
     handleSubmit,
@@ -100,12 +98,12 @@ function ProfileSection({
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: ProfileForm) => {
-      // In demo mode, just update local state
-      return { data: { user: { ...user, ...data } } };
+    mutationFn: async (_data: ProfileForm) => {
+      // In demo mode, just simulate success
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return { success: true };
     },
-    onSuccess: (response) => {
-      setUser(response.data.user);
+    onSuccess: () => {
       onSuccess('Profile updated successfully');
     },
   });
@@ -184,7 +182,7 @@ function PasswordSection({ onSuccess }: { onSuccess: (message: string) => void }
   const newPassword = watch('newPassword');
 
   const updateMutation = useMutation({
-    mutationFn: async (data: PasswordForm) => {
+    mutationFn: async (_data: PasswordForm) => {
       // In demo mode, just simulate success
       await new Promise((resolve) => setTimeout(resolve, 500));
       return { success: true };

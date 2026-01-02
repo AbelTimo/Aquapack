@@ -98,6 +98,7 @@ export interface Borehole {
   staticWaterLevel?: number;
   notes?: string;
   qaStatus: string;
+  boreholeStatus?: 'DRILLING' | 'COMPLETED' | 'OPERATIONAL' | 'ABANDONED';
   _count?: {
     waterLevels: number;
     pumpTests: number;
@@ -140,6 +141,7 @@ export interface WaterQuality {
   boreholeId?: string;
   sampleDatetime: string;
   sampleId?: string;
+  // Field parameters
   temperature?: number;
   ph?: number;
   electricalConductivity?: number;
@@ -147,8 +149,57 @@ export interface WaterQuality {
   dissolvedOxygen?: number;
   turbidity?: number;
   redoxPotential?: number;
+  // Lab report data
+  labReportFile?: string;
+  labReportUrl?: string;
+  labName?: string;
+  labReportDate?: string;
+  // Extended lab parameters
+  alkalinity?: number;
+  hardness?: number;
+  chloride?: number;
+  sulfate?: number;
+  nitrate?: number;
+  fluoride?: number;
+  iron?: number;
+  manganese?: number;
+  arsenic?: number;
+  calcium?: number;
+  magnesium?: number;
+  sodium?: number;
+  potassium?: number;
+  bicarbonate?: number;
+  // Bacteriological
+  totalColiform?: number;
+  fecalColiform?: number;
+  eColiCount?: number;
   notes?: string;
   qaStatus: string;
+}
+
+export interface LabParameter {
+  name: string;
+  value: number | string;
+  unit: string;
+  limit?: number;
+  status?: 'normal' | 'warning' | 'exceeded';
+}
+
+export interface LabReport {
+  id: string;
+  siteId: string;
+  waterQualityId?: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  labName: string;
+  reportDate: string;
+  sampleDate: string;
+  sampleId?: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+  parameters: LabParameter[];
+  notes?: string;
 }
 
 export interface Media {

@@ -62,11 +62,17 @@ api.interceptors.response.use(
 // Auth API
 export const authApi = {
   login: async (email: string, password: string) => {
-    // Check if using demo credentials
-    if (email === 'demo@aquapack.io') {
+    // Clear any old cached auth data before login
+    localStorage.removeItem('aquapack-auth');
+    localStorage.removeItem('aquapack-demo-mode');
+
+    // In demo/development mode (no API configured), use mock login
+    if (!import.meta.env.VITE_API_URL) {
       const result = await mockAuthApi.login(email, password);
-      // Ensure demo mode is enabled before returning
-      localStorage.setItem('aquapack-demo-mode', 'true');
+      // Only show demo banner for actual demo credentials
+      if (email === 'demo@aquapack.io') {
+        localStorage.setItem('aquapack-demo-mode', 'true');
+      }
       return result;
     }
     const response = await api.post('/auth/login', { email, password });
@@ -74,7 +80,9 @@ export const authApi = {
   },
 
   register: async (data: { email: string; password: string; name: string; organizationName: string }) => {
-    if (isDemoMode()) {
+    // In demo/development mode, use mock registration
+    // Check if API is available, otherwise use mock
+    if (isDemoMode() || !import.meta.env.VITE_API_URL) {
       return mockAuthApi.register();
     }
     const response = await api.post('/auth/register', data);

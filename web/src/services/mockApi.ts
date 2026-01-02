@@ -33,15 +33,30 @@ export const mockAuthApi = {
   login: async (email: string, password: string): Promise<ApiResponse<{ user: typeof mockUser; tokens: AuthTokens }>> => {
     await delay(500);
 
-    if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
-      enableDemoMode();
+    // Accept demo credentials OR any email with 8+ char password
+    if ((email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) ||
+        (email && password && password.length >= 8)) {
+      // Generate user name from email
+      const userName = email.split('@')[0]
+        .replace(/[._-]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+
       return {
         success: true,
         data: {
-          user: mockUser,
+          user: {
+            id: 'user-' + Date.now(),
+            email: email,
+            name: userName,
+            role: 'DATA_MANAGER' as const,
+            organizationId: 'org-1',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
           tokens: {
-            accessToken: 'demo-access-token-' + Date.now(),
-            refreshToken: 'demo-refresh-token-' + Date.now(),
+            accessToken: 'access-token-' + Date.now(),
+            refreshToken: 'refresh-token-' + Date.now(),
             expiresIn: 86400,
           },
         },
@@ -55,7 +70,7 @@ export const mockAuthApi = {
           success: false,
           error: {
             code: 'INVALID_CREDENTIALS',
-            message: 'Invalid email or password',
+            message: 'Invalid email or password. Password must be at least 8 characters.',
           },
         },
       },
