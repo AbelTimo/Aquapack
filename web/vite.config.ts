@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  base: '/Aquapack/',
+  base: process.env.NODE_ENV === 'production' ? '/Aquapack/' : '/',
   plugins: [react()],
   resolve: {
     alias: {
