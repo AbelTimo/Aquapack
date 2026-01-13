@@ -41,7 +41,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync(AUTH_KEY);
+    try {
+      await SecureStore.deleteItemAsync(AUTH_KEY);
+    } catch (error) {
+      console.warn('Failed to delete auth from SecureStore:', error);
+      // Continue with logout even if SecureStore fails
+    }
     set({
       user: null,
       tokens: null,

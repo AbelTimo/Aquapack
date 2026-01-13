@@ -80,31 +80,58 @@ export default function ProjectsPage() {
 
       {/* Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="card flex items-center gap-4">
+        <button
+          onClick={() => setSearch('')}
+          className="card flex items-center gap-4 hover:border-aqua-300 hover:shadow-md transition-all cursor-pointer text-left"
+        >
           <div className="w-12 h-12 bg-aqua-100 rounded-xl flex items-center justify-center">
             <svg className="w-6 h-6 text-aqua-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
             </svg>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">{projectsList.length}</p>
-            <p className="text-sm text-gray-500">Total Projects</p>
+            {isLoading ? (
+              <div className="animate-pulse">
+                <div className="h-7 w-12 bg-aqua-100 rounded mb-1" />
+                <div className="h-4 w-20 bg-gray-100 rounded" />
+              </div>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-gray-900">{projectsList.length}</p>
+                <p className="text-sm text-gray-500">Total Projects</p>
+              </>
+            )}
           </div>
-        </div>
+        </button>
 
-        <div className="card flex items-center gap-4">
+        <button
+          onClick={() => setSearch('')}
+          className="card flex items-center gap-4 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer text-left"
+        >
           <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
             <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
-            <p className="text-sm text-gray-500">Active Projects</p>
+            {isLoading ? (
+              <div className="animate-pulse">
+                <div className="h-7 w-12 bg-emerald-100 rounded mb-1" />
+                <div className="h-4 w-20 bg-gray-100 rounded" />
+              </div>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
+                <p className="text-sm text-gray-500">Active Projects</p>
+              </>
+            )}
           </div>
-        </div>
+        </button>
 
-        <div className="card flex items-center gap-4">
+        <Link
+          to="/sites"
+          className="card flex items-center gap-4 hover:border-violet-300 hover:shadow-md transition-all cursor-pointer"
+        >
           <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center">
             <svg className="w-6 h-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -112,10 +139,19 @@ export default function ProjectsPage() {
             </svg>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">{totalSites}</p>
-            <p className="text-sm text-gray-500">Total Sites</p>
+            {isLoading ? (
+              <div className="animate-pulse">
+                <div className="h-7 w-12 bg-violet-100 rounded mb-1" />
+                <div className="h-4 w-20 bg-gray-100 rounded" />
+              </div>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-gray-900">{totalSites}</p>
+                <p className="text-sm text-gray-500">Total Sites</p>
+              </>
+            )}
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Search & View Toggle */}

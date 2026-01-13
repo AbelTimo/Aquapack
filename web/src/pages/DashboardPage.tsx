@@ -1,20 +1,32 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { projectsApi, sitesApi } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import UserManagement from '@/components/UserManagement';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const [showUserManagement, setShowUserManagement] = useState(false);
 
-  const { data: projects, isLoading } = useQuery({
+  // Mock users for demonstration - in production, fetch from API
+  const mockUsers = [
+    { id: '1', email: user?.email || 'admin@example.com', name: user?.name || 'Admin User', role: 'ADMIN' as const, status: 'ACTIVE' as const, createdAt: '2024-01-15', lastLogin: new Date().toISOString(), projectCount: 5 },
+    { id: '2', email: 'manager@example.com', name: 'Project Manager', role: 'MANAGER' as const, status: 'ACTIVE' as const, createdAt: '2024-02-20', lastLogin: '2024-12-28', projectCount: 3 },
+    { id: '3', email: 'tech@example.com', name: 'Field Technician', role: 'FIELD_TECH' as const, status: 'ACTIVE' as const, createdAt: '2024-03-10', lastLogin: '2024-12-30', projectCount: 2 },
+  ];
+
+  const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['my-projects'],
     queryFn: projectsApi.getMyProjects,
   });
 
-  const { data: sites } = useQuery({
+  const { data: sites, isLoading: sitesLoading } = useQuery({
     queryKey: ['all-sites'],
     queryFn: () => sitesApi.getAll({}),
   });
+
+  const isLoading = projectsLoading || sitesLoading;
 
   const projectsList = Array.isArray(projects?.data?.projects) ? projects.data.projects : [];
   const sitesList = Array.isArray(sites?.data?.sites) ? sites.data.sites : [];
@@ -85,24 +97,47 @@ export default function DashboardPage() {
           </div>
           <div className="relative">
             <h2 className="text-lg font-medium text-aqua-100 mb-6">Overview</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center md:text-left">
-                <p className="text-5xl font-bold">{activeProjects}</p>
-                <p className="text-aqua-100 mt-1">Active Projects</p>
+            {isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="text-center md:text-left animate-pulse">
+                    <div className="h-12 w-20 bg-white/20 rounded-lg mb-2" />
+                    <div className="h-4 w-24 bg-white/10 rounded" />
+                  </div>
+                ))}
               </div>
-              <div className="text-center md:text-left">
-                <p className="text-5xl font-bold">{totalSites}</p>
-                <p className="text-aqua-100 mt-1">Total Sites</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <Link
+                  to="/projects"
+                  className="text-center md:text-left p-3 -m-3 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <p className="text-5xl font-bold">{activeProjects}</p>
+                  <p className="text-aqua-100 mt-1">Active Projects</p>
+                </Link>
+                <Link
+                  to="/sites"
+                  className="text-center md:text-left p-3 -m-3 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <p className="text-5xl font-bold">{totalSites}</p>
+                  <p className="text-aqua-100 mt-1">Total Sites</p>
+                </Link>
+                <Link
+                  to="/sites?status=APPROVED"
+                  className="text-center md:text-left p-3 -m-3 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <p className="text-5xl font-bold">{approvedCount}</p>
+                  <p className="text-aqua-100 mt-1">Approved</p>
+                </Link>
+                <Link
+                  to="/sites?status=PENDING"
+                  className="text-center md:text-left p-3 -m-3 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <p className="text-5xl font-bold">{pendingCount + flaggedCount}</p>
+                  <p className="text-aqua-100 mt-1">Need Review</p>
+                </Link>
               </div>
-              <div className="text-center md:text-left">
-                <p className="text-5xl font-bold">{approvedCount}</p>
-                <p className="text-aqua-100 mt-1">Approved</p>
-              </div>
-              <div className="text-center md:text-left">
-                <p className="text-5xl font-bold">{pendingCount + flaggedCount}</p>
-                <p className="text-aqua-100 mt-1">Need Review</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -114,8 +149,17 @@ export default function DashboardPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-4xl font-bold text-amber-500">{pendingCount}</p>
-                <p className="text-gray-600 font-medium mt-1">Pending Review</p>
+                {isLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-10 w-16 bg-amber-100 rounded-lg mb-2" />
+                    <div className="h-4 w-24 bg-gray-100 rounded" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-4xl font-bold text-amber-500">{pendingCount}</p>
+                    <p className="text-gray-600 font-medium mt-1">Pending Review</p>
+                  </>
+                )}
               </div>
               <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,8 +174,17 @@ export default function DashboardPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-4xl font-bold text-rose-500">{flaggedCount}</p>
-                <p className="text-gray-600 font-medium mt-1">Flagged Issues</p>
+                {isLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-10 w-16 bg-rose-100 rounded-lg mb-2" />
+                    <div className="h-4 w-24 bg-gray-100 rounded" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-4xl font-bold text-rose-500">{flaggedCount}</p>
+                    <p className="text-gray-600 font-medium mt-1">Flagged Issues</p>
+                  </>
+                )}
               </div>
               <div className="w-14 h-14 bg-rose-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-7 h-7 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -236,12 +289,15 @@ export default function DashboardPage() {
                 label="Projects"
                 color="violet"
               />
-              <ActionButton
-                href="/settings"
-                icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
-                label="Settings"
-                color="gray"
-              />
+              <button
+                onClick={() => setShowUserManagement(true)}
+                className="flex flex-col items-center justify-center p-4 rounded-xl transition-all bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow-md"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span className="text-sm font-medium mt-2">Users</span>
+              </button>
             </div>
           </div>
 
@@ -317,6 +373,27 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* User Management Modal */}
+      {showUserManagement && (
+        <UserManagement
+          users={mockUsers}
+          currentUserId={mockUsers[0].id}
+          onUpdateUser={async (userId, updates) => {
+            console.log('Update user:', userId, updates);
+            // TODO: Implement API call
+          }}
+          onDeleteUser={async (userId) => {
+            console.log('Delete user:', userId);
+            // TODO: Implement API call
+          }}
+          onInviteUser={async (email, role) => {
+            console.log('Invite user:', email, role);
+            // TODO: Implement API call
+          }}
+          onClose={() => setShowUserManagement(false)}
+        />
+      )}
     </div>
   );
 }

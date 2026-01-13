@@ -112,13 +112,25 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
 
   // Calculate scale for SVG
   const svgHeight = 600;
-  const svgWidth = 400;
+  const svgWidth = 450;
   const depthScale = (svgHeight - 80) / design.totalDepth;
   const topOffset = 40;
 
   // Get lithology color
   const getLithologyColor = (soilType: string) => {
     return LITHOLOGY_TYPES.find(t => t.value === soilType)?.color || '#ccc';
+  };
+
+  // Determine if text should be light or dark based on background
+  const getContrastTextColor = (bgColor: string) => {
+    // Convert hex to RGB
+    const hex = bgColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#1f2937' : '#ffffff';
   };
 
   // Add new lithology layer
@@ -149,108 +161,446 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
     }));
   };
 
-  // Export to PDF
-  const exportToPDF = () => {
-    // Create a simple print-friendly version
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+  // Export dropdown state
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
+  // Download SVG file
+  const downloadSVG = () => {
+    const svgElement = svgRef.current;
+    if (!svgElement) return;
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${borehole?.name || 'borehole'}-completion-diagram.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  // Download as PNG
+  const downloadPNG = () => {
+    const svgElement = svgRef.current;
+    if (!svgElement) return;
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    // Set canvas size (2x for better quality)
+    canvas.width = svgWidth * 2;
+    canvas.height = svgHeight * 2;
+
+    img.onload = () => {
+      if (ctx) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.scale(2, 2);
+        ctx.drawImage(img, 0, 0);
+
+        const pngUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = `${borehole?.name || 'borehole'}-completion-diagram.png`;
+        a.click();
+      }
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    setShowExportMenu(false);
+  };
+
+  // Download complete driller's report as HTML (can be saved as PDF)
+  const downloadDrillerReport = () => {
+    const svgElement = svgRef.current;
+    const svgData = svgElement ? new XMLSerializer().serializeToString(svgElement) : '';
+    const fileName = `${borehole?.name || 'borehole'}-driller-report.html`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Driller's Completion Report - ${borehole?.name || 'Borehole'}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      color: #333;
+    }
+    .header {
+      border-bottom: 3px solid #0891b2;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      color: #0891b2;
+      margin: 0 0 5px 0;
+      font-size: 24px;
+    }
+    .header .subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .info-label {
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .info-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+    .diagram-container {
+      text-align: center;
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .diagram-container svg {
+      max-width: 100%;
+      height: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #0891b2;
+      color: white;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    tr:nth-child(even) { background: #f8f9fa; }
+    .section {
+      margin: 25px 0;
+      page-break-inside: avoid;
+    }
+    .section h2 {
+      font-size: 16px;
+      color: #0891b2;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    .notes-section {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .notes-section h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #92400e;
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #ddd;
+      font-size: 11px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature-area {
+      margin-top: 40px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 40px;
+    }
+    .signature-box {
+      border-top: 1px solid #333;
+      padding-top: 8px;
+    }
+    .signature-label {
+      font-size: 11px;
+      color: #666;
+    }
+    @media print {
+      body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+        padding: 10px;
+      }
+      .header { page-break-after: avoid; }
+      .section { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>BOREHOLE COMPLETION REPORT</h1>
+    <p class="subtitle">Driller's Construction Specification</p>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">Borehole ID</span>
+      <span class="info-value">${borehole?.name || 'N/A'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Date Generated</span>
+      <span class="info-value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Total Depth</span>
+      <span class="info-value">${design.totalDepth} meters</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Static Water Level</span>
+      <span class="info-value">${design.staticWaterLevel} meters</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Location</span>
+      <span class="info-value">${borehole?.latitude ? `${borehole.latitude.toFixed(6)}, ${borehole.longitude.toFixed(6)}` : 'N/A'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Elevation</span>
+      <span class="info-value">${borehole?.elevation ? `${borehole.elevation} m ASL` : 'N/A'}</span>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <h3 style="margin: 0 0 15px 0; color: #374151;">Completion Diagram</h3>
+    ${svgData}
+  </div>
+
+  <div class="section">
+    <h2>LITHOLOGY LOG</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 15%">From (m)</th>
+          <th style="width: 15%">To (m)</th>
+          <th style="width: 15%">Thickness (m)</th>
+          <th style="width: 25%">Formation</th>
+          <th style="width: 30%">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${design.lithology.map(l => `
+          <tr>
+            <td>${l.fromDepth}</td>
+            <td>${l.toDepth}</td>
+            <td>${l.toDepth - l.fromDepth}</td>
+            <td><strong>${LITHOLOGY_TYPES.find(t => t.value === l.soilType)?.label || l.soilType}</strong></td>
+            <td>${l.description || '-'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>CASING DESIGN SPECIFICATION</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>From (m)</th>
+          <th>To (m)</th>
+          <th>Length (m)</th>
+          <th>Type</th>
+          <th>Diameter</th>
+          <th>Material</th>
+          <th>Slot Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${design.casing.map(c => `
+          <tr>
+            <td>${c.fromDepth}</td>
+            <td>${c.toDepth}</td>
+            <td>${c.toDepth - c.fromDepth}</td>
+            <td><strong style="color: ${c.type === 'screen' ? '#16a34a' : '#2563eb'}">${c.type === 'screen' ? 'SCREEN' : 'BLIND CASING'}</strong></td>
+            <td>${c.diameter} mm</td>
+            <td>${CASING_MATERIALS.find(m => m.value === c.material)?.label || c.material}</td>
+            <td>${c.slotSize ? c.slotSize + ' mm' : '-'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>GRAVEL PACK</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>From (m)</th>
+          <th>To (m)</th>
+          <th>Length (m)</th>
+          <th>Grade Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${design.gravelPack.length > 0 ? design.gravelPack.map(g => `
+          <tr>
+            <td>${g.fromDepth}</td>
+            <td>${g.toDepth}</td>
+            <td>${g.toDepth - g.fromDepth}</td>
+            <td>${g.gradeSize}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">No gravel pack specified</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>CEMENT / GROUT</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>From (m)</th>
+          <th>To (m)</th>
+          <th>Length (m)</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${design.cement.length > 0 ? design.cement.map(c => `
+          <tr>
+            <td>${c.fromDepth}</td>
+            <td>${c.toDepth}</td>
+            <td>${c.toDepth - c.fromDepth}</td>
+            <td>${c.type === 'surface_seal' ? 'Surface Seal' : c.type === 'annular' ? 'Annular Seal' : 'Bottom Plug'}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">No cement zones specified</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="notes-section">
+    <h3>IMPORTANT NOTES FOR DRILLER</h3>
+    <ul style="margin: 0; padding-left: 20px; font-size: 13px;">
+      <li>Ensure all casing joints are properly sealed</li>
+      <li>Gravel pack should be placed slowly to avoid bridging</li>
+      <li>Allow cement to cure for minimum 24 hours before development</li>
+      <li>Verify actual depths against design during installation</li>
+      <li>Record any deviations from this design on completion</li>
+    </ul>
+  </div>
+
+  <div class="signature-area">
+    <div>
+      <div class="signature-box">
+        <p class="signature-label">Prepared By (Hydrogeologist)</p>
+      </div>
+      <p style="font-size: 11px; color: #666; margin-top: 5px;">Date: _______________</p>
+    </div>
+    <div>
+      <div class="signature-box">
+        <p class="signature-label">Approved By (Project Manager)</p>
+      </div>
+      <p style="font-size: 11px; color: #666; margin-top: 5px;">Date: _______________</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Generated by Aquapack - Field Data Management System</span>
+    <span>Document ID: ${borehole?.id || 'DRAFT'}</span>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  // Print directly
+  const printReport = () => {
     const svgElement = svgRef.current;
     const svgData = svgElement ? new XMLSerializer().serializeToString(svgElement) : '';
 
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
     printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Borehole Design - ${borehole?.name || 'Report'}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { color: #0891b2; }
-            .header { margin-bottom: 20px; }
-            .diagram { text-align: center; margin: 20px 0; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background: #f5f5f5; }
-            .section { margin: 30px 0; }
-            @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Borehole Completion Diagram</h1>
-            <p><strong>Borehole:</strong> ${borehole?.name || 'N/A'}</p>
-            <p><strong>Total Depth:</strong> ${design.totalDepth} m</p>
-            <p><strong>Static Water Level:</strong> ${design.staticWaterLevel} m</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-          </div>
-
-          <div class="diagram">
-            ${svgData}
-          </div>
-
-          <div class="section">
-            <h2>Lithology Log</h2>
-            <table>
-              <thead>
-                <tr><th>From (m)</th><th>To (m)</th><th>Soil/Rock Type</th><th>Description</th></tr>
-              </thead>
-              <tbody>
-                ${design.lithology.map(l => `
-                  <tr>
-                    <td>${l.fromDepth}</td>
-                    <td>${l.toDepth}</td>
-                    <td>${LITHOLOGY_TYPES.find(t => t.value === l.soilType)?.label || l.soilType}</td>
-                    <td>${l.description || '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="section">
-            <h2>Casing Design</h2>
-            <table>
-              <thead>
-                <tr><th>From (m)</th><th>To (m)</th><th>Type</th><th>Diameter (mm)</th><th>Material</th><th>Slot Size (mm)</th></tr>
-              </thead>
-              <tbody>
-                ${design.casing.map(c => `
-                  <tr>
-                    <td>${c.fromDepth}</td>
-                    <td>${c.toDepth}</td>
-                    <td>${c.type === 'screen' ? 'Screen' : 'Blind'}</td>
-                    <td>${c.diameter}</td>
-                    <td>${CASING_MATERIALS.find(m => m.value === c.material)?.label || c.material}</td>
-                    <td>${c.slotSize || '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="section">
-            <h2>Gravel Pack</h2>
-            <table>
-              <thead>
-                <tr><th>From (m)</th><th>To (m)</th><th>Grade Size</th></tr>
-              </thead>
-              <tbody>
-                ${design.gravelPack.map(g => `
-                  <tr>
-                    <td>${g.fromDepth}</td>
-                    <td>${g.toDepth}</td>
-                    <td>${g.gradeSize}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <script>window.onload = function() { window.print(); }</script>
-        </body>
-      </html>
-    `);
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Borehole Design - ${borehole?.name || 'Report'}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #0891b2; font-size: 20px; }
+    .header { border-bottom: 2px solid #0891b2; padding-bottom: 10px; margin-bottom: 15px; }
+    .info-row { display: flex; gap: 30px; margin-bottom: 15px; font-size: 13px; }
+    .diagram { text-align: center; margin: 15px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+    th { background: #0891b2; color: white; }
+    .section { margin: 20px 0; }
+    .section h2 { font-size: 14px; color: #0891b2; margin-bottom: 8px; }
+    @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>BOREHOLE COMPLETION DESIGN</h1>
+  </div>
+  <div class="info-row">
+    <div><strong>Borehole:</strong> ${borehole?.name || 'N/A'}</div>
+    <div><strong>Total Depth:</strong> ${design.totalDepth} m</div>
+    <div><strong>SWL:</strong> ${design.staticWaterLevel} m</div>
+    <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
+  </div>
+  <div class="diagram">${svgData}</div>
+  <div class="section">
+    <h2>Lithology Log</h2>
+    <table>
+      <tr><th>From</th><th>To</th><th>Formation</th><th>Description</th></tr>
+      ${design.lithology.map(l => `<tr><td>${l.fromDepth}m</td><td>${l.toDepth}m</td><td>${LITHOLOGY_TYPES.find(t => t.value === l.soilType)?.label || l.soilType}</td><td>${l.description || '-'}</td></tr>`).join('')}
+    </table>
+  </div>
+  <div class="section">
+    <h2>Casing Design</h2>
+    <table>
+      <tr><th>From</th><th>To</th><th>Type</th><th>Diameter</th><th>Material</th><th>Slot</th></tr>
+      ${design.casing.map(c => `<tr><td>${c.fromDepth}m</td><td>${c.toDepth}m</td><td>${c.type === 'screen' ? 'Screen' : 'Blind'}</td><td>${c.diameter}mm</td><td>${CASING_MATERIALS.find(m => m.value === c.material)?.label || c.material}</td><td>${c.slotSize || '-'}</td></tr>`).join('')}
+    </table>
+  </div>
+  <script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`);
     printWindow.document.close();
+    setShowExportMenu(false);
   };
 
   return (
@@ -271,15 +621,85 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
             </svg>
             Save Design
           </button>
-          <button
-            onClick={exportToPDF}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Export PDF
-          </button>
+
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export
+              <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showExportMenu && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowExportMenu(false)} />
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 z-40 overflow-hidden">
+                  <div className="py-1">
+                    <button
+                      onClick={downloadSVG}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <div className="text-left">
+                        <p className="font-medium">Download SVG</p>
+                        <p className="text-xs text-gray-500">Vector format for editing</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={downloadPNG}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <div className="text-left">
+                        <p className="font-medium">Download PNG</p>
+                        <p className="text-xs text-gray-500">High-quality image</p>
+                      </div>
+                    </button>
+
+                    <div className="border-t border-gray-100 my-1" />
+
+                    <button
+                      onClick={downloadDrillerReport}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <div className="text-left">
+                        <p className="font-medium">Driller's Report</p>
+                        <p className="text-xs text-gray-500">Complete specs for handover</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={printReport}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      <div className="text-left">
+                        <p className="font-medium">Print</p>
+                        <p className="text-xs text-gray-500">Print or save as PDF</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -301,15 +721,26 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
               </text>
 
               {/* Depth scale on left */}
-              <g transform={`translate(30, ${topOffset})`}>
+              <g transform={`translate(35, ${topOffset})`}>
                 {Array.from({ length: Math.floor(design.totalDepth / 10) + 1 }, (_, i) => i * 10).map(depth => (
                   <g key={depth}>
                     <line x1="0" y1={depth * depthScale} x2="10" y2={depth * depthScale} stroke="#9CA3AF" strokeWidth="1" />
-                    <text x="-5" y={depth * depthScale + 4} textAnchor="end" fontSize="10" fill="#6B7280">{depth}</text>
+                    <text x="-5" y={depth * depthScale + 4} textAnchor="end" fontSize="10" fill="#374151" fontWeight="500">{depth}</text>
                   </g>
                 ))}
-                <text x="-15" y={-10} textAnchor="middle" fontSize="10" fill="#6B7280" transform="rotate(-90, -15, 50)">Depth (m)</text>
               </g>
+              {/* Depth label - positioned separately for proper rotation */}
+              <text
+                x="12"
+                y={topOffset + (design.totalDepth * depthScale) / 2}
+                textAnchor="middle"
+                fontSize="10"
+                fill="#374151"
+                fontWeight="500"
+                transform={`rotate(-90, 12, ${topOffset + (design.totalDepth * depthScale) / 2})`}
+              >
+                Depth (m)
+              </text>
 
               {/* Main diagram area */}
               <g transform={`translate(80, ${topOffset})`}>
@@ -317,29 +748,49 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
                 <rect x="50" y="0" width="120" height={design.totalDepth * depthScale} fill="#f3f4f6" stroke="#d1d5db" strokeWidth="1" />
 
                 {/* Lithology layers */}
-                {design.lithology.map((layer) => (
-                  <g key={layer.id}>
-                    <rect
-                      x="0"
-                      y={layer.fromDepth * depthScale}
-                      width="45"
-                      height={(layer.toDepth - layer.fromDepth) * depthScale}
-                      fill={getLithologyColor(layer.soilType)}
-                      stroke="#9CA3AF"
-                      strokeWidth="0.5"
-                    />
-                    {/* Pattern for lithology */}
-                    <text
-                      x="22"
-                      y={((layer.fromDepth + layer.toDepth) / 2) * depthScale + 4}
-                      textAnchor="middle"
-                      fontSize="8"
-                      fill="#374151"
-                    >
-                      {LITHOLOGY_TYPES.find(t => t.value === layer.soilType)?.label?.substring(0, 6) || ''}
-                    </text>
-                  </g>
-                ))}
+                {design.lithology.map((layer) => {
+                  const bgColor = getLithologyColor(layer.soilType);
+                  const textColor = getContrastTextColor(bgColor);
+                  return (
+                    <g key={layer.id}>
+                      <rect
+                        x="0"
+                        y={layer.fromDepth * depthScale}
+                        width="45"
+                        height={(layer.toDepth - layer.fromDepth) * depthScale}
+                        fill={bgColor}
+                        stroke="#9CA3AF"
+                        strokeWidth="0.5"
+                      />
+                      {/* Pattern for lithology */}
+                      {/* Text outline for visibility on dark backgrounds */}
+                      {textColor === '#ffffff' && (
+                        <text
+                          x="22"
+                          y={((layer.fromDepth + layer.toDepth) / 2) * depthScale + 4}
+                          textAnchor="middle"
+                          fontSize="8"
+                          fill="none"
+                          stroke="#000000"
+                          strokeWidth="2"
+                          fontWeight="600"
+                        >
+                          {LITHOLOGY_TYPES.find(t => t.value === layer.soilType)?.label?.substring(0, 6) || ''}
+                        </text>
+                      )}
+                      <text
+                        x="22"
+                        y={((layer.fromDepth + layer.toDepth) / 2) * depthScale + 4}
+                        textAnchor="middle"
+                        fontSize="8"
+                        fill={textColor}
+                        fontWeight="600"
+                      >
+                        {LITHOLOGY_TYPES.find(t => t.value === layer.soilType)?.label?.substring(0, 6) || ''}
+                      </text>
+                    </g>
+                  );
+                })}
 
                 {/* Gravel pack zones */}
                 {design.gravelPack.map((zone) => (
@@ -444,7 +895,8 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
                       x="200"
                       y={((section.fromDepth + section.toDepth) / 2) * depthScale + 4}
                       fontSize="9"
-                      fill="#374151"
+                      fill={section.type === 'screen' ? '#16a34a' : '#2563eb'}
+                      fontWeight="600"
                     >
                       {section.type === 'screen' ? 'Screen' : 'Blind'} {section.diameter}mm
                     </text>
@@ -465,14 +917,15 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
                   x="200"
                   y={design.staticWaterLevel * depthScale + 4}
                   fontSize="9"
-                  fill="#0ea5e9"
+                  fill="#0284c7"
+                  fontWeight="600"
                 >
                   SWL: {design.staticWaterLevel}m
                 </text>
 
                 {/* Ground level */}
                 <line x1="-10" y1="0" x2="180" y2="0" stroke="#16a34a" strokeWidth="3" />
-                <text x="200" y="4" fontSize="9" fill="#16a34a">Ground Level</text>
+                <text x="200" y="4" fontSize="9" fill="#16a34a" fontWeight="600">Ground Level</text>
 
                 {/* Bottom of borehole */}
                 <line
@@ -483,21 +936,31 @@ export default function BoreholeDesign({ borehole, onSave }: Props) {
                   stroke="#1f2937"
                   strokeWidth="2"
                 />
+                <text
+                  x="200"
+                  y={design.totalDepth * depthScale + 4}
+                  fontSize="9"
+                  fill="#374151"
+                  fontWeight="500"
+                >
+                  TD: {design.totalDepth}m
+                </text>
               </g>
 
               {/* Legend */}
-              <g transform={`translate(${svgWidth - 120}, ${svgHeight - 100})`}>
+              <g transform={`translate(${svgWidth - 130}, ${svgHeight - 110})`}>
+                <rect x="-5" y="-12" width="125" height="105" fill="white" stroke="#e5e7eb" rx="4" />
                 <text x="0" y="0" fontSize="10" fontWeight="bold" fill="#374151">Legend</text>
-                <rect x="0" y="10" width="15" height="10" fill="#3b82f6" />
-                <text x="20" y="18" fontSize="9" fill="#6B7280">Blind Casing</text>
-                <rect x="0" y="25" width="15" height="10" fill="#22c55e" />
-                <text x="20" y="33" fontSize="9" fill="#6B7280">Screen</text>
-                <rect x="0" y="40" width="15" height="10" fill="#94a3b8" />
-                <text x="20" y="48" fontSize="9" fill="#6B7280">Cement</text>
-                <rect x="0" y="55" width="15" height="10" fill="url(#gravelPattern)" stroke="#9CA3AF" />
-                <text x="20" y="63" fontSize="9" fill="#6B7280">Gravel Pack</text>
+                <rect x="0" y="10" width="15" height="10" fill="#3b82f6" stroke="#1f2937" strokeWidth="0.5" />
+                <text x="20" y="18" fontSize="9" fill="#374151">Blind Casing</text>
+                <rect x="0" y="25" width="15" height="10" fill="#22c55e" stroke="#1f2937" strokeWidth="0.5" />
+                <text x="20" y="33" fontSize="9" fill="#374151">Screen</text>
+                <rect x="0" y="40" width="15" height="10" fill="#94a3b8" stroke="#64748b" strokeWidth="0.5" />
+                <text x="20" y="48" fontSize="9" fill="#374151">Cement</text>
+                <rect x="0" y="55" width="15" height="10" fill="url(#gravelPattern)" stroke="#9CA3AF" strokeWidth="0.5" />
+                <text x="20" y="63" fontSize="9" fill="#374151">Gravel Pack</text>
                 <line x1="0" y1="75" x2="15" y2="75" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="3,2" />
-                <text x="20" y="78" fontSize="9" fill="#6B7280">Water Level</text>
+                <text x="20" y="78" fontSize="9" fill="#374151">Water Level</text>
               </g>
 
               {/* Patterns */}

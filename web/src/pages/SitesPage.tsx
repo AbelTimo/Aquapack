@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sitesApi } from '@/services/api';
 import Map from '@/components/Map';
 import Pagination from '@/components/Pagination';
+import ExportTools from '@/components/ExportTools';
+import BulkImport from '@/components/BulkImport';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -20,6 +22,13 @@ export default function SitesPage() {
   const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<string>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  // Sync status filter with URL parameter
+  useEffect(() => {
+    setStatusFilter(statusFromUrl);
+  }, [statusFromUrl]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -138,6 +147,36 @@ export default function SitesPage() {
     }
   };
 
+  const handleBulkImport = async (sites: any[]) => {
+    // Transform imported data to match API format and create sites
+    for (const site of sites) {
+      try {
+        await sitesApi.create({
+          ...site,
+          projectId: projectId || undefined,
+        });
+      } catch (error) {
+        console.error('Failed to import site:', site.name, error);
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['sites'] });
+    setShowImportModal(false);
+  };
+
+  // Get sites for export (all filtered sites, not just paginated)
+  const sitesForExport = sortedSites.map((site: any) => ({
+    id: site.id,
+    name: site.name,
+    code: site.code,
+    latitude: site.latitude,
+    longitude: site.longitude,
+    elevation: site.elevation,
+    siteType: site.siteType,
+    qaStatus: site.qaStatus,
+    description: site.description,
+    _count: site._count,
+  }));
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -149,8 +188,30 @@ export default function SitesPage() {
           </p>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-2">
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          {/* Import/Export Buttons */}
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Import
+          </button>
+          <button
+            onClick={() => setShowExportModal(true)}
+            disabled={sitesList.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-aqua-500 text-white rounded-xl text-sm font-medium hover:bg-aqua-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+
+          {/* View Toggle */}
           <div className="bg-gray-100 p-1 rounded-xl flex">
             <button
               onClick={() => setViewMode('list')}
@@ -561,6 +622,22 @@ export default function SitesPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportTools
+          sites={sitesForExport}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <BulkImport
+          onImport={handleBulkImport}
+          onClose={() => setShowImportModal(false)}
+        />
       )}
     </div>
   );

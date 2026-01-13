@@ -109,7 +109,13 @@ export default function SyncScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await logout();
+            try {
+              await logout();
+            } catch (error) {
+              console.error('Logout error:', error);
+              // Force logout even on error
+              await logout();
+            }
           },
         },
       ]

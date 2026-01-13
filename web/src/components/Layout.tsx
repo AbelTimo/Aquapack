@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { authApi } from '@/services/api';
-import { isDemoMode, disableDemoMode } from '@/services/mockApi';
+import { isDemoMode } from '@/services/mockApi';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -73,7 +72,25 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const { user, logout } = useAuthStore();
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const { user } = useAuthStore();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Sample notifications for demo
   const notifications = [
@@ -87,17 +104,6 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const demoMode = isDemoMode();
-
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Ignore errors, logout anyway
-    }
-    disableDemoMode();
-    logout();
-    navigate('/login');
-  };
 
   // Get page title based on current route
   const getPageTitle = () => {
@@ -139,7 +145,7 @@ export default function Layout() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b border-gray-100">
-            <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity" onClick={() => setSidebarOpen(false)}>
               <div className="w-10 h-10 bg-gradient-to-br from-aqua-500 to-aqua-700 rounded-xl flex items-center justify-center shadow-lg shadow-aqua-500/30">
                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -149,7 +155,7 @@ export default function Layout() {
                 <span className="text-xl font-bold text-gray-900">Aquapack</span>
                 <p className="text-xs text-gray-500">Field Data Management</p>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Search (optional) */}
@@ -185,6 +191,7 @@ export default function Layout() {
                 )}
               </NavLink>
             ))}
+
           </nav>
 
           {/* Quick Stats */}
@@ -220,11 +227,16 @@ export default function Layout() {
               </div>
             </div>
             <button
-              onClick={() => {
-                setSidebarOpen(false);
-                handleLogout();
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                useAuthStore.setState({ user: null, tokens: null, isAuthenticated: false, isLoading: false });
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/login';
               }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors cursor-pointer"
             >
               <LogoutIcon className="w-4 h-4" />
               Sign Out
@@ -259,14 +271,18 @@ export default function Layout() {
             {/* Right side actions */}
             <div className="flex items-center gap-2">
               {/* Notifications */}
-              <div className="relative">
+              <div ref={notificationsRef} className="relative">
                 <button
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNotifications(!showNotifications);
+                    setShowUserMenu(false);
+                  }}
                   className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   <BellIcon className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
                       {unreadCount}
                     </span>
                   )}
@@ -274,7 +290,7 @@ export default function Layout() {
 
                 {/* Notifications Dropdown */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-slide-down">
+                  <div className="absolute -right-2 sm:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-slide-down">
                     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Notifications</h3>
                       {unreadCount > 0 && (
@@ -353,9 +369,13 @@ export default function Layout() {
               </div>
 
               {/* User avatar (desktop) */}
-              <div className="hidden lg:block relative">
+              <div ref={userMenuRef} className="hidden lg:block relative">
                 <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowUserMenu(!showUserMenu);
+                    setShowNotifications(false);
+                  }}
                   className="flex items-center gap-3 pl-4 border-l border-gray-200 hover:bg-gray-50 rounded-xl p-2 -m-2 transition-colors"
                 >
                   <div className="text-right">
@@ -376,8 +396,8 @@ export default function Layout() {
                     <div className="p-4 border-b border-gray-100 bg-gray-50">
                       <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{user?.email}</p>
-                      <span className="inline-block mt-2 text-xs font-medium text-aqua-600 bg-aqua-50 px-2 py-0.5 rounded-full">
-                        {user?.role?.replace('_', ' ')}
+                      <span className="inline-block mt-2 text-xs font-medium text-aqua-600 bg-aqua-50 px-2 py-0.5 rounded-full capitalize">
+                        {user?.role?.toLowerCase().replace(/_/g, ' ')}
                       </span>
                     </div>
                     <div className="py-2">
@@ -394,7 +414,7 @@ export default function Layout() {
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
-                          navigate('/settings');
+                          setShowHelpModal(true);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -405,16 +425,20 @@ export default function Layout() {
                       </button>
                     </div>
                     <div className="border-t border-gray-100 py-2">
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          handleLogout();
+                      <a
+                        href="/login"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          useAuthStore.setState({ user: null, tokens: null, isAuthenticated: false, isLoading: false });
+                          localStorage.clear();
+                          sessionStorage.clear();
+                          window.location.href = '/login';
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 bg-red-50/50 hover:bg-red-50 transition-colors cursor-pointer"
                       >
                         <LogoutIcon className="w-4 h-4" />
                         Sign Out
-                      </button>
+                      </a>
                     </div>
                   </div>
                 )}
@@ -429,15 +453,120 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Click outside to close dropdowns */}
-      {(showUserMenu || showNotifications) && (
-        <div
-          className="fixed inset-0 z-30"
-          onClick={() => {
-            setShowUserMenu(false);
-            setShowNotifications(false);
-          }}
-        />
+      {/* Help & Support Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+            onClick={() => setShowHelpModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-slide-up">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-aqua-500 to-aqua-600">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Help & Support</h2>
+                  <p className="text-sm text-aqua-100">We're here to help</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {/* FAQs */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Frequently Asked Questions</h3>
+                <div className="space-y-3">
+                  <details className="group bg-gray-50 rounded-xl">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                      <span className="text-sm font-medium text-gray-700">How do I add a new site?</span>
+                      <svg className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <p className="px-4 pb-4 text-sm text-gray-600">Navigate to Sites page and click the "Add Site" button. Fill in the required information including location, coordinates, and site details.</p>
+                  </details>
+                  <details className="group bg-gray-50 rounded-xl">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                      <span className="text-sm font-medium text-gray-700">How does offline sync work?</span>
+                      <svg className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <p className="px-4 pb-4 text-sm text-gray-600">Data collected in the mobile app is stored locally and syncs automatically when you have an internet connection. You can also manually trigger a sync from the mobile app.</p>
+                  </details>
+                  <details className="group bg-gray-50 rounded-xl">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                      <span className="text-sm font-medium text-gray-700">How do I export data?</span>
+                      <svg className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <p className="px-4 pb-4 text-sm text-gray-600">Go to the Site Detail page and use the export options to download data as CSV, GeoJSON, or generate PDF reports.</p>
+                  </details>
+                  <details className="group bg-gray-50 rounded-xl">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                      <span className="text-sm font-medium text-gray-700">What do the site status colors mean?</span>
+                      <svg className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <p className="px-4 pb-4 text-sm text-gray-600">
+                      <span className="font-medium">Pending:</span> Awaiting review. <span className="font-medium">Approved:</span> Data verified. <span className="font-medium">Flagged:</span> Needs attention. <span className="font-medium">Draft:</span> Incomplete entry.
+                    </p>
+                  </details>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Contact Us</h3>
+                <div className="space-y-3">
+                  <a href="mailto:support@aquapack.io" className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div className="w-10 h-10 bg-aqua-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-5 h-5 text-aqua-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Email Support</p>
+                      <p className="text-xs text-gray-500">support@aquapack.io</p>
+                    </div>
+                  </a>
+                  <a href="tel:+1234567890" className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Phone Support</p>
+                      <p className="text-xs text-gray-500">+1 (234) 567-890</p>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50">
+              <p className="text-xs text-center text-gray-500">Aquapack v1.0.0 - Field Data Management System</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

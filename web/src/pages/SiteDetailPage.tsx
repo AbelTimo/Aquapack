@@ -6,6 +6,8 @@ import Map from '@/components/Map';
 import { WaterLevelChart, WaterQualityChart } from '@/components/Charts';
 import BoreholeDesign from '@/components/BoreholeDesign';
 import LabReportUpload from '@/components/LabReportUpload';
+import PumpTestAnalysis from '@/components/PumpTestAnalysis';
+import WaterLevelTrends from '@/components/WaterLevelTrends';
 import { LabReport } from '@/types';
 
 const formatDate = (date: string | Date, style: 'short' | 'medium' | 'long' = 'medium') => {
@@ -27,7 +29,7 @@ const formatDateForExport = (date: string | Date) => {
 export default function SiteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [reviewComment, setReviewComment] = useState('');
-  const [activeTab, setActiveTab] = useState<'details' | 'boreholes' | 'measurements' | 'quality' | 'design'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'boreholes' | 'measurements' | 'quality' | 'design' | 'analysis' | 'trends'>('details');
   const [showLabReportUpload, setShowLabReportUpload] = useState(false);
   const [labReports, setLabReports] = useState<LabReport[]>([]);
   const queryClient = useQueryClient();
@@ -300,13 +302,15 @@ export default function SiteDetailPage() {
           {/* Tabs Content */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Tab Navigation */}
-            <div className="border-b border-gray-100 px-4">
-              <nav className="flex gap-1">
+            <div className="border-b border-gray-100 px-4 overflow-x-auto">
+              <nav className="flex gap-1 min-w-max">
                 {[
                   { id: 'details', label: 'Details', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
                   { id: 'boreholes', label: `Boreholes (${boreholes.length})`, icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
                   { id: 'design', label: 'Design', icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
                   { id: 'measurements', label: `Measurements (${waterLevels.length})`, icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
+                  { id: 'trends', label: 'Trends', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+                  { id: 'analysis', label: `Pump Tests (${pumpTests.length})`, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
                   { id: 'quality', label: `Water Quality (${waterQuality.length})`, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
                 ].map((tab) => (
                   <button
@@ -438,11 +442,11 @@ export default function SiteDetailPage() {
               {activeTab === 'quality' && (
                 <div className="space-y-6">
                   {/* Upload Lab Report Button */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <h3 className="text-lg font-semibold text-gray-900">Water Quality Assessment</h3>
                     <button
                       onClick={() => setShowLabReportUpload(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-aqua-500 text-white rounded-xl text-sm font-medium hover:bg-aqua-600 transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-aqua-500 text-white rounded-xl text-sm font-medium hover:bg-aqua-600 transition-colors whitespace-nowrap"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -485,18 +489,18 @@ export default function SiteDetailPage() {
 
                           {/* Parameters with status indicators */}
                           {report.parameters.length > 0 && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mt-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 mt-4">
                               {report.parameters.map((param, idx) => (
                                 <div
                                   key={idx}
-                                  className={`p-3 rounded-lg ${
+                                  className={`p-2 sm:p-3 rounded-lg ${
                                     param.status === 'exceeded' ? 'bg-red-100 border border-red-200' :
                                     param.status === 'warning' ? 'bg-yellow-100 border border-yellow-200' :
                                     'bg-white border border-gray-100'
                                   }`}
                                 >
-                                  <p className="text-xs text-gray-500 truncate">{param.name}</p>
-                                  <p className={`text-lg font-semibold ${
+                                  <p className="text-xs text-gray-500 truncate" title={param.name}>{param.name}</p>
+                                  <p className={`text-sm sm:text-lg font-semibold ${
                                     param.status === 'exceeded' ? 'text-red-700' :
                                     param.status === 'warning' ? 'text-yellow-700' :
                                     'text-gray-900'
@@ -505,7 +509,7 @@ export default function SiteDetailPage() {
                                     <span className="text-xs font-normal text-gray-400 ml-1">{param.unit}</span>
                                   </p>
                                   {param.limit && (
-                                    <p className="text-xs text-gray-400">Limit: {param.limit}</p>
+                                    <p className="text-xs text-gray-400 truncate">Limit: {param.limit}</p>
                                   )}
                                 </div>
                               ))}
@@ -535,12 +539,12 @@ export default function SiteDetailPage() {
                     <div className="space-y-4">
                       <h4 className="text-sm font-medium text-gray-700">Field Measurements</h4>
                       {waterQuality.map((wq: any) => (
-                        <div key={wq.id} className="p-5 bg-gray-50 rounded-xl">
-                          <div className="flex justify-between items-center mb-4">
+                        <div key={wq.id} className="p-4 sm:p-5 bg-gray-50 rounded-xl">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
                             <span className="font-semibold text-gray-900">{wq.sampleId || 'Field Sample'}</span>
                             <span className="text-sm text-gray-500">{formatDate(wq.sampleDatetime)}</span>
                           </div>
-                          <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
                             <ParamCard label="Temp" value={wq.temperature} unit="°C" />
                             <ParamCard label="pH" value={wq.ph} />
                             <ParamCard label="EC" value={wq.electricalConductivity} unit="µS/cm" />
@@ -565,6 +569,57 @@ export default function SiteDetailPage() {
                     // TODO: Save to API
                   }}
                 />
+              )}
+
+              {activeTab === 'trends' && (
+                <div className="space-y-6">
+                  {waterLevels.length > 0 ? (
+                    <WaterLevelTrends
+                      waterLevels={waterLevels.map((wl: any) => ({
+                        id: wl.id,
+                        measurementDatetime: wl.measurementDatetime,
+                        depthToWater: wl.depthToWater,
+                        depthUnit: wl.depthUnit || 'm',
+                        measurementMethod: wl.measurementMethod,
+                        measurementType: wl.measurementType,
+                        notes: wl.notes,
+                      }))}
+                      staticWaterLevel={boreholes[0]?.staticWaterLevel}
+                      siteName={siteData.name}
+                    />
+                  ) : (
+                    <EmptyState message="No water level data available for trend analysis" icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'analysis' && (
+                <div className="space-y-6">
+                  {pumpTests.length > 0 ? (
+                    <PumpTestAnalysis
+                      pumpTests={pumpTests.map((pt: any) => ({
+                        id: pt.id,
+                        testType: pt.testType || 'CONSTANT_RATE',
+                        startDatetime: pt.startDatetime,
+                        endDatetime: pt.endDatetime,
+                        staticWaterLevel: pt.staticWaterLevel || boreholes[0]?.staticWaterLevel || 0,
+                        finalWaterLevel: pt.finalWaterLevel,
+                        averageDischargeRate: pt.pumpRate,
+                        totalDuration: pt.duration,
+                        entries: (pt.entries || []).map((e: any) => ({
+                          id: e.id,
+                          elapsedMinutes: e.elapsedMinutes,
+                          waterLevel: e.waterLevel,
+                          dischargeRate: e.pumpRate,
+                          remarks: e.notes,
+                        })),
+                        notes: pt.notes,
+                      }))}
+                    />
+                  ) : (
+                    <EmptyState message="No pump tests recorded for this site" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  )}
+                </div>
               )}
             </div>
           </div>

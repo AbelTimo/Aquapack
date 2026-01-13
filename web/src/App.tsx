@@ -31,7 +31,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
 
+  console.log('[PublicRoute] Rendering - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+  console.log('[PublicRoute] localStorage:', localStorage.getItem('aquapack-auth'));
+
   if (isLoading) {
+    console.log('[PublicRoute] Showing loading spinner');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -40,9 +44,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
+    console.log('[PublicRoute] isAuthenticated=true, redirecting to /dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
+  console.log('[PublicRoute] Showing children (login page)');
   return <>{children}</>;
 }
 

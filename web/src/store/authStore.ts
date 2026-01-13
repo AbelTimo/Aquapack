@@ -58,10 +58,14 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
-        // Set loading to false after hydration completes
-        if (state) {
-          state.setLoading(false);
-        }
+        console.log('[AuthStore] onRehydrateStorage called, state:', state);
+        console.log('[AuthStore] localStorage at rehydration:', localStorage.getItem('aquapack-auth'));
+        // Always set loading to false after hydration completes (whether successful or not)
+        // Use setTimeout to ensure this runs after the store is fully initialized
+        setTimeout(() => {
+          console.log('[AuthStore] Setting isLoading to false');
+          useAuthStore.setState({ isLoading: false });
+        }, 0);
       },
     }
   )
