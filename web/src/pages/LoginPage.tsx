@@ -48,7 +48,7 @@ export default function LoginPage() {
 
       if (response?.data?.user && response?.data?.tokens) {
         setAuth(response.data.user, response.data.tokens);
-        window.location.href = '/dashboard';
+        window.location.href = window.location.pathname.includes('/Aquapack') ? '/Aquapack/#/dashboard' : '/#/dashboard';
       } else {
         setError('Invalid response from demo login');
         setIsDemoLoading(false);

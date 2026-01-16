@@ -49,7 +49,7 @@ api.interceptors.response.use(
         } catch (refreshError) {
           // Refresh failed, logout user
           useAuthStore.getState().logout();
-          window.location.href = '/login';
+          window.location.href = window.location.pathname.includes('/Aquapack') ? '/Aquapack/#/login' : '/#/login';
           return Promise.reject(refreshError);
         }
       }

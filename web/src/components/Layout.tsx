@@ -234,7 +234,7 @@ export default function Layout() {
                 useAuthStore.setState({ user: null, tokens: null, isAuthenticated: false, isLoading: false });
                 localStorage.clear();
                 sessionStorage.clear();
-                window.location.href = '/login';
+                window.location.href = window.location.pathname.includes('/Aquapack') ? '/Aquapack/#/login' : '/#/login';
               }}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors cursor-pointer"
             >
@@ -432,7 +432,7 @@ export default function Layout() {
                           useAuthStore.setState({ user: null, tokens: null, isAuthenticated: false, isLoading: false });
                           localStorage.clear();
                           sessionStorage.clear();
-                          window.location.href = '/login';
+                          window.location.href = window.location.pathname.includes('/Aquapack') ? '/Aquapack/#/login' : '/#/login';
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 bg-red-50/50 hover:bg-red-50 transition-colors cursor-pointer"
                       >
