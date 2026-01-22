@@ -9,6 +9,7 @@ import LabReportUpload from '@/components/LabReportUpload';
 import PumpTestAnalysis from '@/components/PumpTestAnalysis';
 import WaterLevelTrends from '@/components/WaterLevelTrends';
 import { LabReport } from '@/types';
+import { useUpdateBorehole } from '@/hooks/useBoreholes';
 
 const formatDate = (date: string | Date, style: 'short' | 'medium' | 'long' = 'medium') => {
   const d = new Date(date);
@@ -33,6 +34,7 @@ export default function SiteDetailPage() {
   const [showLabReportUpload, setShowLabReportUpload] = useState(false);
   const [labReports, setLabReports] = useState<LabReport[]>([]);
   const queryClient = useQueryClient();
+  const { mutateAsync: updateBorehole } = useUpdateBorehole();
 
   const { data: siteResponse, isLoading } = useQuery({
     queryKey: ['site', id],
@@ -564,9 +566,14 @@ export default function SiteDetailPage() {
               {activeTab === 'design' && (
                 <BoreholeDesign
                   borehole={boreholes[0]}
-                  onSave={(data) => {
-                    console.log('Borehole design saved:', data);
-                    // TODO: Save to API
+                  onSave={async (data) => {
+                    try {
+                      if (boreholes[0]?.id) {
+                        await updateBorehole({ id: boreholes[0].id, data });
+                      }
+                    } catch (error) {
+                      console.error('Failed to save borehole design:', error);
+                    }
                   }}
                 />
               )}

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { isDemoMode } from '@/services/mockApi';
+import { mockProjects, mockSites, mockBoreholes } from '@/services/mockData';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -73,9 +74,42 @@ export default function Layout() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const { user } = useAuthStore();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Global search across projects, sites, and boreholes
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) return { projects: [], sites: [], boreholes: [] };
+
+    const query = searchQuery.toLowerCase();
+
+    const projects = mockProjects.filter(p =>
+      p.name.toLowerCase().includes(query) ||
+      p.code.toLowerCase().includes(query) ||
+      p.client?.toLowerCase().includes(query) ||
+      p.region?.toLowerCase().includes(query)
+    ).slice(0, 3);
+
+    const sites = mockSites.filter(s =>
+      s.name.toLowerCase().includes(query) ||
+      s.siteCode.toLowerCase().includes(query) ||
+      s.villageTown?.toLowerCase().includes(query) ||
+      s.lga?.toLowerCase().includes(query)
+    ).slice(0, 5);
+
+    const boreholes = mockBoreholes.filter(b =>
+      b.boreholeId.toLowerCase().includes(query) ||
+      b.drillingMethod?.toLowerCase().includes(query)
+    ).slice(0, 3);
+
+    return { projects, sites, boreholes };
+  }, [searchQuery]);
+
+  const hasResults = searchResults.projects.length > 0 || searchResults.sites.length > 0 || searchResults.boreholes.length > 0;
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -85,6 +119,9 @@ export default function Layout() {
       }
       if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
       }
     };
 
@@ -158,15 +195,111 @@ export default function Layout() {
             </Link>
           </div>
 
-          {/* Search (optional) */}
-          <div className="px-4 py-4">
+          {/* Global Search */}
+          <div className="px-4 py-4" ref={searchRef}>
             <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search sites, projects..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => setShowSearchResults(true)}
                 className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-aqua-500/20 focus:bg-white transition-all"
               />
+
+              {/* Search Results Dropdown */}
+              {showSearchResults && searchQuery.length >= 2 && (
+                <div className="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 max-h-96 overflow-y-auto">
+                  {!hasResults ? (
+                    <div className="p-4 text-sm text-gray-500 text-center">
+                      No results found for "{searchQuery}"
+                    </div>
+                  ) : (
+                    <>
+                      {/* Projects */}
+                      {searchResults.projects.length > 0 && (
+                        <div>
+                          <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">Projects</div>
+                          {searchResults.projects.map((project) => (
+                            <button
+                              key={project.id}
+                              onClick={() => {
+                                navigate(`/projects/${project.id}`);
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                                setSidebarOpen(false);
+                              }}
+                              className="w-full px-3 py-2 text-left hover:bg-aqua-50 flex items-center gap-3"
+                            >
+                              <FolderIcon className="w-4 h-4 text-aqua-500" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{project.name}</p>
+                                <p className="text-xs text-gray-500 truncate">{project.code} • {project.region}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Sites */}
+                      {searchResults.sites.length > 0 && (
+                        <div>
+                          <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">Sites</div>
+                          {searchResults.sites.map((site) => (
+                            <button
+                              key={site.id}
+                              onClick={() => {
+                                navigate(`/sites/${site.id}`);
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                                setSidebarOpen(false);
+                              }}
+                              className="w-full px-3 py-2 text-left hover:bg-aqua-50 flex items-center gap-3"
+                            >
+                              <MapPinIcon className="w-4 h-4 text-emerald-500" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{site.name}</p>
+                                <p className="text-xs text-gray-500 truncate">{site.siteCode} • {site.villageTown || site.lga}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Boreholes */}
+                      {searchResults.boreholes.length > 0 && (
+                        <div>
+                          <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">Boreholes</div>
+                          {searchResults.boreholes.map((borehole) => (
+                            <button
+                              key={borehole.id}
+                              onClick={() => {
+                                navigate(`/sites/${borehole.siteId}`);
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                                setSidebarOpen(false);
+                              }}
+                              className="w-full px-3 py-2 text-left hover:bg-aqua-50 flex items-center gap-3"
+                            >
+                              <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                              </svg>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{borehole.boreholeId}</p>
+                                <p className="text-xs text-gray-500 truncate">{borehole.drillingMethod} • {borehole.totalDepth}m</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

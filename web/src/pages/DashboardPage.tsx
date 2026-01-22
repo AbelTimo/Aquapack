@@ -4,17 +4,19 @@ import { Link } from 'react-router-dom';
 import { projectsApi, sitesApi } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import UserManagement from '@/components/UserManagement';
+import { useUsers, useUpdateUser, useDeleteUser, useInviteUser } from '@/hooks/useUsers';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const [showUserManagement, setShowUserManagement] = useState(false);
 
-  // Mock users for demonstration - in production, fetch from API
-  const mockUsers = [
-    { id: '1', email: user?.email || 'admin@example.com', name: user?.name || 'Admin User', role: 'ADMIN' as const, status: 'ACTIVE' as const, createdAt: '2024-01-15', lastLogin: new Date().toISOString(), projectCount: 5 },
-    { id: '2', email: 'manager@example.com', name: 'Project Manager', role: 'MANAGER' as const, status: 'ACTIVE' as const, createdAt: '2024-02-20', lastLogin: '2024-12-28', projectCount: 3 },
-    { id: '3', email: 'tech@example.com', name: 'Field Technician', role: 'FIELD_TECH' as const, status: 'ACTIVE' as const, createdAt: '2024-03-10', lastLogin: '2024-12-30', projectCount: 2 },
-  ];
+  // Fetch users from API
+  const { data: usersData } = useUsers();
+  const { mutateAsync: updateUser } = useUpdateUser();
+  const { mutateAsync: deleteUser } = useDeleteUser();
+  const { mutateAsync: inviteUser } = useInviteUser();
+
+  const users = usersData?.data || [];
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['my-projects'],
@@ -377,19 +379,16 @@ export default function DashboardPage() {
       {/* User Management Modal */}
       {showUserManagement && (
         <UserManagement
-          users={mockUsers}
-          currentUserId={mockUsers[0].id}
+          users={users}
+          currentUserId={user?.id || ''}
           onUpdateUser={async (userId, updates) => {
-            console.log('Update user:', userId, updates);
-            // TODO: Implement API call
+            await updateUser({ id: userId, data: updates });
           }}
           onDeleteUser={async (userId) => {
-            console.log('Delete user:', userId);
-            // TODO: Implement API call
+            await deleteUser(userId);
           }}
           onInviteUser={async (email, role) => {
-            console.log('Invite user:', email, role);
-            // TODO: Implement API call
+            await inviteUser({ email, name: email.split('@')[0], role });
           }}
           onClose={() => setShowUserManagement(false)}
         />

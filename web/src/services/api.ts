@@ -236,11 +236,271 @@ export const sitesApi = {
 
 // Boreholes API
 export const boreholesApi = {
-  getAll: async (params?: { siteId?: string; boreholeStatus?: string }) => {
+  getAll: async (params?: { siteId?: string; qaStatus?: string; search?: string; page?: number; limit?: number }) => {
     if (isDemoMode()) {
       return mockBoreholesApi.getAll(params);
     }
     const response = await api.get('/boreholes', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    if (isDemoMode()) {
+      return mockBoreholesApi.getById(id);
+    }
+    const response = await api.get(`/boreholes/${id}`);
+    return response.data;
+  },
+
+  create: async (data: any) => {
+    if (isDemoMode()) {
+      return mockBoreholesApi.create(data);
+    }
+    const response = await api.post('/boreholes', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: any) => {
+    if (isDemoMode()) {
+      return mockBoreholesApi.update(id, data);
+    }
+    const response = await api.put(`/boreholes/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    if (isDemoMode()) {
+      return mockBoreholesApi.delete(id);
+    }
+    const response = await api.delete(`/boreholes/${id}`);
+    return response.data;
+  },
+
+  review: async (id: string, status: string, comment?: string) => {
+    if (isDemoMode()) {
+      return mockBoreholesApi.review?.(id, status, comment) || { success: true, data: {} };
+    }
+    const response = await api.post(`/boreholes/${id}/review`, { status, comment });
+    return response.data;
+  },
+};
+
+// Water Levels API
+export const waterLevelsApi = {
+  getAll: async (params?: { siteId?: string; boreholeId?: string; dateFrom?: string; dateTo?: string; page?: number; limit?: number }) => {
+    if (isDemoMode()) {
+      return { success: true, data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    }
+    const response = await api.get('/water-levels', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.get(`/water-levels/${id}`);
+    return response.data;
+  },
+
+  getTrends: async (siteId: string, params?: { dateFrom?: string; dateTo?: string }) => {
+    if (isDemoMode()) {
+      return { success: true, data: { trends: [], measurements: [] } };
+    }
+    const response = await api.get(`/water-levels/trends/${siteId}`, { params });
+    return response.data;
+  },
+
+  create: async (data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.post('/water-levels', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.put(`/water-levels/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.delete(`/water-levels/${id}`);
+    return response.data;
+  },
+};
+
+// Pump Tests API
+export const pumpTestsApi = {
+  getAll: async (params?: { siteId?: string; boreholeId?: string; testType?: string; page?: number; limit?: number }) => {
+    if (isDemoMode()) {
+      return { success: true, data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    }
+    const response = await api.get('/pump-tests', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.get(`/pump-tests/${id}`);
+    return response.data;
+  },
+
+  create: async (data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.post('/pump-tests', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.put(`/pump-tests/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.delete(`/pump-tests/${id}`);
+    return response.data;
+  },
+
+  addEntry: async (pumpTestId: string, data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.post(`/pump-tests/${pumpTestId}/entries`, data);
+    return response.data;
+  },
+
+  updateEntry: async (pumpTestId: string, entryId: string, data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.put(`/pump-tests/${pumpTestId}/entries/${entryId}`, data);
+    return response.data;
+  },
+
+  deleteEntry: async (pumpTestId: string, entryId: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.delete(`/pump-tests/${pumpTestId}/entries/${entryId}`);
+    return response.data;
+  },
+};
+
+// Water Quality API
+export const waterQualityApi = {
+  getAll: async (params?: { siteId?: string; boreholeId?: string; dateFrom?: string; dateTo?: string; page?: number; limit?: number }) => {
+    if (isDemoMode()) {
+      return { success: true, data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    }
+    const response = await api.get('/water-quality', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.get(`/water-quality/${id}`);
+    return response.data;
+  },
+
+  getSummary: async (siteId: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: { count: 0, parameters: {} } };
+    }
+    const response = await api.get(`/water-quality/summary/${siteId}`);
+    return response.data;
+  },
+
+  create: async (data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.post('/water-quality', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: any) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.put(`/water-quality/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.delete(`/water-quality/${id}`);
+    return response.data;
+  },
+};
+
+// Users API
+export const usersApi = {
+  getAll: async () => {
+    if (isDemoMode()) {
+      return { success: true, data: [] };
+    }
+    const response = await api.get('/users');
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+
+  update: async (id: string, data: { name?: string; email?: string }) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.put(`/users/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
+  },
+
+  invite: async (data: { email: string; name: string; role: string }) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.post('/users/invite', data);
+    return response.data;
+  },
+
+  changeRole: async (id: string, role: string) => {
+    if (isDemoMode()) {
+      return { success: true, data: {} };
+    }
+    const response = await api.put(`/users/${id}/role`, { role });
     return response.data;
   },
 };

@@ -113,6 +113,38 @@ export const sitesApi = {
   },
 };
 
+// Boreholes API
+export const boreholesApi = {
+  create: async (data: any) => {
+    const response = await api.post('/boreholes', data);
+    return response.data;
+  },
+};
+
+// Water Levels API
+export const waterLevelsApi = {
+  create: async (data: any) => {
+    const response = await api.post('/water-levels', data);
+    return response.data;
+  },
+};
+
+// Pump Tests API
+export const pumpTestsApi = {
+  create: async (data: any) => {
+    const response = await api.post('/pump-tests', data);
+    return response.data;
+  },
+};
+
+// Water Quality API
+export const waterQualityApi = {
+  create: async (data: any) => {
+    const response = await api.post('/water-quality', data);
+    return response.data;
+  },
+};
+
 // Check if online
 export const checkConnection = async (): Promise<boolean> => {
   try {

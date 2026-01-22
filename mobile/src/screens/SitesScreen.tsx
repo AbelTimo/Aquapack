@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getSitesByProject, LocalSite, getProjects } from '../services/database';
@@ -20,6 +21,7 @@ export default function SitesScreen({ navigation, route }: any) {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -137,9 +139,7 @@ export default function SitesScreen({ navigation, route }: any) {
           <Text style={styles.projectLabel}>Project:</Text>
           <TouchableOpacity
             style={styles.projectDropdown}
-            onPress={() => {
-              // TODO: Implement project picker
-            }}
+            onPress={() => setShowProjectPicker(true)}
           >
             <Text style={styles.projectDropdownText}>
               {currentProject?.name || 'Select Project'}
@@ -183,6 +183,58 @@ export default function SitesScreen({ navigation, route }: any) {
           <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
       )}
+
+      {/* Project Picker Modal */}
+      <Modal
+        visible={showProjectPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowProjectPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowProjectPicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Project</Text>
+              <TouchableOpacity onPress={() => setShowProjectPicker(false)}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={projects}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.projectOption,
+                    item.id === selectedProject && styles.projectOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedProject(item.id);
+                    loadSites(item.id);
+                    setShowProjectPicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.projectOptionText,
+                      item.id === selectedProject && styles.projectOptionTextSelected,
+                    ]}
+                  >
+                    {item.name} ({item.code})
+                  </Text>
+                  {item.id === selectedProject && (
+                    <Ionicons name="checkmark" size={20} color="#0891b2" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -328,6 +380,51 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '85%',
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  projectOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  projectOptionSelected: {
+    backgroundColor: '#e0f2fe',
+  },
+  projectOptionText: {
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  projectOptionTextSelected: {
+    color: '#0891b2',
+    fontWeight: '600',
   },
 });
 

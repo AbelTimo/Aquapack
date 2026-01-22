@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { getSyncStats, getPendingSyncItems, markSyncItemProcessed, markSyncItemFailed } from '../services/database';
-import { checkConnection, sitesApi } from '../services/api';
+import { checkConnection, sitesApi, boreholesApi, waterLevelsApi, pumpTestsApi, waterQualityApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
 export default function SyncScreen() {
@@ -67,12 +67,23 @@ export default function SyncScreen() {
 
       for (const item of pendingItems) {
         try {
-          // For now, just mark as processed
-          // In a real implementation, you'd send each item to the appropriate API endpoint
+          const payload = JSON.parse(item.payload);
+
+          // Route to appropriate API based on entity type
+          let response;
           if (item.entityType === 'site') {
-            // await sitesApi.create(JSON.parse(item.payload));
+            response = await sitesApi.create(payload);
+          } else if (item.entityType === 'borehole') {
+            response = await boreholesApi.create(payload);
+          } else if (item.entityType === 'waterLevel') {
+            response = await waterLevelsApi.create(payload);
+          } else if (item.entityType === 'pumpTest') {
+            response = await pumpTestsApi.create(payload);
+          } else if (item.entityType === 'waterQuality') {
+            response = await waterQualityApi.create(payload);
           }
 
+          // Mark as processed
           await markSyncItemProcessed(item.id);
           successCount++;
         } catch (error: any) {
